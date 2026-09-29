@@ -977,7 +977,9 @@ function showHome(){
 
 function lessonBtn(l, isNext){
   const [c, d] = lessonColor(l);
-  return h('button', {class:'lesson-btn' + (isNext ? ' next' : ''), style:{'--c':c, '--d':d}, 'aria-label':`Lesson ${l.n}: ${l.focus}`,
+  const cnt = doneCount(l.n);
+  const status = cnt === ACTS.length ? ', finished' : cnt ? `, ${cnt} of ${ACTS.length} done` : '';
+  return h('button', {class:'lesson-btn' + (isNext ? ' next' : ''), style:{'--c':c, '--d':d}, 'aria-label':`Lesson ${l.n}: ${l.focus}${status}`,
       onclick:() => { Sfx.tap(); go('#/lesson/' + l.n); }},
     h('span', {class:'num'}, l.n),
     h('span', {class:'letters' + (l.label.length > 5 ? ' small' : '')}, l.label),
@@ -997,7 +999,7 @@ function showLesson(l){
         hfWords(l).map(w => h('button', {class:'hf-chip', onclick:e => { Sfx.tap(); bounce(e.currentTarget); Speech.speak(w); }}, w)))),
     h('div', {class:'act-grid'}, ACTS.map((a, i) => {
       const done = isDone(l.n, a.key);
-      return h('button', {class:'act-card' + (done ? ' done' : '') + (a === next ? ' next' : ''), style:{'--c':a.color},
+      return h('button', {class:'act-card' + (done ? ' done' : '') + (a === next ? ' next' : ''), style:{'--c':a.color}, 'aria-label':`${i + 1}. ${actName(l, a)}${done ? ', done' : ''}`,
           onclick:() => { Sfx.tap(); go(`#/lesson/${l.n}/${a.key}`); }},
         h('span', {class:'step'}, i + 1),
         done ? h('span', {class:'check'}, '✅') : null,
@@ -1073,7 +1075,7 @@ function showStickers(){
     h('div', {class:'sticker-grid'}, LESSONS.map(l => {
       const got = lessonComplete(l.n);
       const [emo, name] = STICKERS[l.n - 1];
-      return h('button', {class:'sticker-slot' + (got ? ' got' : ''), onclick:e => {
+      return h('button', {class:'sticker-slot' + (got ? ' got' : ''), 'aria-label':`Lesson ${l.n} sticker: ${got ? name : 'not earned yet'}`, onclick:e => {
           Sfx.tap(); bounce(e.currentTarget);
           if (got) say(P.aSticker(name) + ' 🎉', P.aSticker(name)); else say(P.finishFor(l.n));
         }},
@@ -1083,10 +1085,11 @@ function showStickers(){
 }
 
 function showParents(){
-  const seg = (options, cur, onPick) => {
-    const wrap = h('div', {class:'seg'});
-    options.forEach(([label, val]) => wrap.append(h('button', {class:val === cur ? 'on' : null, onclick:e => {
-      [...wrap.children].forEach(b => b.classList.remove('on')); e.currentTarget.classList.add('on'); onPick(val);
+  const seg = (name, options, cur, onPick) => {
+    const wrap = h('div', {class:'seg', role:'radiogroup', 'aria-label':name});
+    options.forEach(([label, val]) => wrap.append(h('button', {class:val === cur ? 'on' : null, role:'radio', 'aria-checked':String(val === cur), onclick:e => {
+      [...wrap.children].forEach(b => { b.classList.toggle('on', b === e.currentTarget); b.setAttribute('aria-checked', String(b === e.currentTarget)); });
+      onPick(val);
     }}, label)));
     return wrap;
   };
@@ -1123,9 +1126,9 @@ function showParents(){
     h('section', {class:'panel-card'},
       h('h2', {}, 'Settings'),
       h('div', {class:'setting'}, h('label', {}, 'Voice speed'),
-        seg([['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak(T.readingVoice); })),
+        seg('Voice speed', [['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak(T.readingVoice); })),
       h('div', {class:'setting'}, h('label', {}, 'Sound effects'),
-        seg([['🔔 On', true], ['🔕 Off', false]], state.settings.sfx, v => { state.settings.sfx = v; saveState(); Sfx.good(); })),
+        seg('Sound effects', [['🔔 On', true], ['🔕 Off', false]], state.settings.sfx, v => { state.settings.sfx = v; saveState(); Sfx.good(); })),
       h('div', {class:'setting'}, h('label', {}, 'Sound test'),
         h('button', {class:'btn blue', onclick:() => { Sfx.good(); Speech.speak(T.readingVoice); }}, '🔊 Test sound')),
       h('p', {class:'note'}, 'No sound? Turn the volume up. If the page is open inside an app such as WeChat, open it in the phone’s browser instead (tap “…” → “Open in browser”). If Bluetooth headphones or a speaker are connected, the sound plays there.'),
@@ -1701,9 +1704,9 @@ function actDraw(ctx){
     Sfx.tap(); erasing = !erasing; eraser.classList.toggle('on', erasing); eraser.setAttribute('aria-pressed', String(erasing)); }}, '🧽');
   const undoBtn = h('button', {class:'tool', 'aria-label':'undo', title:'undo', onclick:() => { Sfx.tap(); const snap = history.pop(); if (snap) c2d.putImageData(snap, 0, 0); }}, '↩️');
   const clearBtn = h('button', {class:'tool', 'aria-label':'clear picture', title:'clear picture', onclick:() => { Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; }}, '🗑️');
-  const bank = h('div', {class:'word-bank'}, words.map(w => h('button', {class:'wchip', onclick:e => {
+  const bank = h('div', {class:'word-bank', role:'group', 'aria-label':'Pick a word for your picture'}, words.map(w => h('button', {class:'wchip', 'aria-pressed':'false', onclick:e => {
     Sfx.tap(); label = w; labelEl.textContent = (PIC[w] ? PIC[w] + ' ' : '') + w;
-    [...bank.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on');
+    [...bank.children].forEach(c => { c.classList.toggle('on', c === e.currentTarget); c.setAttribute('aria-pressed', String(c === e.currentTarget)); });
     Speech.speak(w);
   }}, w)));
   const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', title:'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
@@ -1812,13 +1815,21 @@ window.__phonicsPhrases = allPhrases;
    START
    ===================================================================== */
 Speech.init();
-document.addEventListener('pointerdown', () => { if (Speech.blocked && audioUnlocked){ Speech.blocked = false; Speech.unlock(); Sfx.ensure(); } }, true);
-document.addEventListener('touchend', () => { if (Speech.blocked && audioUnlocked){ Speech.blocked = false; Speech.unlock(); Sfx.ensure(); } }, true);
+// Browsers only allow sound after a tap. The first tap turns it on (pages opened without the start
+// screen), and a tap after iOS blocked audio (a call, time in the background) turns it back on.
+// Only these events count as a tap for that: pointerdown does not for touch.
+const activateAudio = () => {
+  if (!audioUnlocked){
+    audioUnlocked = true; Speech.unlock(); Sfx.ensure();
+    Speech.preload([...Object.values(T), ...PRAISE, ...TRY]);
+  } else if (Speech.blocked){ Speech.blocked = false; Speech.unlock(); Sfx.ensure(); }
+};
+['pointerup', 'touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, activateAudio, true));
 if (/[?&]v=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
 window.addEventListener('hashchange', route);
 document.addEventListener('visibilitychange', () => { if (document.hidden) Speech.stop(); });
 route();
-overlay([
+if (!/^#\/parents/.test(location.hash)) overlay([
   h('div', {class:'hero-lion'}, '🦁'),
   h('h1', {}, 'Phonics Fun!'),
   h('p', {}, 'Kindergarten phonics · 25 lessons'),
