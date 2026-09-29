@@ -19,34 +19,77 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUDIO = os.path.join(ROOT, 'audio')
 VOICE = 'af_heart'
 
-# Letter names, so a lone capital letter is always read as its name ("T" -> "tee").
-LETTER_NAMES = {
-    'A': 'ay', 'B': 'bee', 'C': 'see', 'D': 'dee', 'E': 'ee', 'F': 'eff', 'G': 'jee', 'H': 'aitch', 'J': 'jay',
-    'K': 'kay', 'L': 'el', 'M': 'em', 'N': 'en', 'O': 'oh', 'P': 'pee', 'Q': 'cue', 'R': 'ar', 'S': 'ess', 'T': 'tee',
-    'U': 'you', 'V': 'vee', 'W': 'double you', 'X': 'ex', 'Y': 'why', 'Z': 'zee',
+# How each letter name must sound (checked in the phonemes before a clip is recorded).
+LETTER_PHONEMES = {
+    'A': 'eɪ', 'B': 'biː', 'C': 'siː', 'D': 'diː', 'E': 'iː', 'F': 'ɛf', 'G': 'dʒiː', 'H': 'eɪtʃ', 'I': 'aɪ', 'J': 'dʒeɪ',
+    'K': 'keɪ', 'L': 'ɛl', 'M': 'ɛm', 'N': 'ɛn', 'O': 'oʊ', 'P': 'piː', 'Q': 'kjuː', 'R': 'ɑːɹ', 'S': 'ɛs', 'T': 'tiː',
+    'U': 'juː', 'V': 'viː', 'W': 'dʌbəljuː', 'X': 'ɛks', 'Y': 'waɪ', 'Z': 'ziː',
 }
 # Phrases spoken from different text.
 OVERRIDES = {
     'a': 'uh.',  # the sight word "a" is said "uh", not the letter name
 }
+# Short lines are cut out of this sentence, so they start cleanly instead of with a stray sound.
+CARRIER = 'The next word is:'
+STRESS = str.maketrans('', '', 'ˈˌ')
 
 
-def tts_text(phrase):
+def is_article(text, m):
+    """'A monkey!' starts with the article; 'A is for apple' and 'A, magic e' name the letter."""
+    return m.group(1) == 'A' and m.start() == 0 and re.match(r' (?!is\b)[a-z]', text[m.end():]) is not None
+
+
+def phonemes_for(kokoro, phrase):
+    """Phonemes for a phrase, with every letter name checked."""
     if phrase in OVERRIDES:
-        return OVERRIDES[phrase]
-    t = re.sub(r'\b([Mm]agic) e\b', r'\1 ee', phrase)
+        return kokoro.tokenizer.phonemize(OVERRIDES[phrase], 'en-us')
+    letters = [m.group(1) for m in re.finditer(r'\b([A-Z])\b', phrase) if not is_article(phrase, m)]
+    # a lone A between words is read as the article, so it is spoken via the placeholder "hey"
+    text = re.sub(r'\b([A-Z])\b', lambda m: m.group(1) if is_article(phrase, m) or m.group(1) != 'A' else 'hey', phrase)
+    if not re.search(r'[.!?:]$', text):
+        text += '.'  # a lone word sounds complete when it ends like a sentence
+    ph = kokoro.tokenizer.phonemize(text, 'en-us')
+    ph = re.sub(r'h([ˈˌ]?)eɪ', r'\1eɪ', ph)
+    flat = ph.translate(STRESS).replace(' ', '')
+    for L in set(letters):
+        need = phrase.count(L) if L != 'I' else 1
+        if flat.count(LETTER_PHONEMES[L]) < min(need, letters.count(L)):
+            raise SystemExit(f'letter {L} not pronounced as its name in {phrase!r}: {ph}')
+    return ph
 
-    def letter(m):
-        # "A monkey!" starts with the article; "A is for apple" and "A, magic e" use the letter name
-        if m.group(1) == 'A' and m.start() == 0 and re.match(r' (?!is\b)[a-z]', t[m.end():]):
-            return 'A'
-        return LETTER_NAMES[m.group(1)]
 
-    t = re.sub(r'\b([A-HJ-Z])\b', letter, t)
-    # a lone word sounds complete (not cut off) when it ends like a sentence
-    if not re.search(r'[.!?:]$', t):
-        t += '.'
-    return t
+def cut_after_pause(x, rate):
+    """Keep the audio after the longest pause (the carrier's colon), or None if there is no clear pause."""
+    f = int(rate * 0.01)
+    rms = np.array([np.sqrt(np.mean(x[i:i + f] ** 2)) for i in range(0, len(x) - f, f)])
+    quiet = list(rms < 0.03 * rms.max()) + [False]
+    runs, s = [], None
+    for i, q in enumerate(quiet):
+        if q and s is None:
+            s = i
+        if not q and s is not None:
+            runs.append((s, i))
+            s = None
+    runs = [r for r in runs if r[1] < len(rms) - 15]  # at least 150 ms of speech after the pause
+    if not runs:
+        return None
+    s, e = max(runs, key=lambda r: r[1] - r[0])
+    return x[max(0, e * f - int(0.03 * rate)):] if e - s >= 8 else None
+
+
+def synthesize(kokoro, phrase):
+    ph = phonemes_for(kokoro, phrase)
+    words = len(phrase.split())
+    speed = 0.85 if words <= 2 else 0.92  # single words a little slower
+    direct, rate = kokoro.create(ph, voice=VOICE, speed=speed, lang='en-us', is_phonemes=True)
+    direct = np.asarray(direct, np.float32)
+    if words <= 3 and not re.search(r'[,;:.!?]', phrase[:-1]):
+        carrier = kokoro.tokenizer.phonemize(CARRIER, 'en-us')
+        full, rate = kokoro.create(carrier + ' ' + ph, voice=VOICE, speed=speed, lang='en-us', is_phonemes=True)
+        cut = cut_after_pause(np.asarray(full, np.float32), rate)
+        if cut is not None and 0.6 * len(direct) <= len(cut) <= 1.8 * len(direct):
+            return cut, rate
+    return direct, rate
 
 
 def clip_name(mp3):
@@ -87,8 +130,7 @@ def main(model, voices, redo=(), everything=False):
         if ph in old and ph not in redo and os.path.exists(os.path.join(AUDIO, old[ph])):
             manifest[ph] = old[ph]
             continue
-        speed = 0.85 if len(ph.split()) <= 2 else 0.92  # single words a little slower
-        pcm, rate = kokoro.create(tts_text(ph), voice=VOICE, speed=speed, lang='en-us')
+        pcm, rate = synthesize(kokoro, ph)
         mp3 = to_mp3(pcm, rate)
         manifest[ph] = clip_name(mp3)
         with open(os.path.join(AUDIO, manifest[ph]), 'wb') as f:
