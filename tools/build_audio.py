@@ -1,37 +1,51 @@
 """Record Leo's voice: one MP3 per phrase in tools/phrases.json, plus audio/manifest.js.
 
-Voice: Piper TTS with the public-domain LJSpeech voice (en_US-ljspeech-high).
+Voice: Kokoro-82M (Apache-2.0), American English voice "af_heart", run locally with kokoro-onnx.
 Usage:
-  pip install piper-tts lameenc numpy
+  pip install kokoro-onnx lameenc numpy
+  # model files: https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0
   node tools/export_phrases.js
-  python3 tools/build_audio.py path/to/en_US-ljspeech-high.onnx [--redo "phrase" ...]
-Existing clips are reused, so re-running only records new phrases (and any passed with --redo).
-A newly recorded clip is named after its content, so browsers never play a stale cached copy.
+  python3 tools/build_audio.py kokoro-v1.0.onnx voices-v1.0.bin [--all] [--redo "phrase" ...]
+Existing clips are reused, so re-running only records new phrases (plus any passed with --redo,
+or everything with --all). A newly recorded clip is named after its content, so browsers never
+play a stale cached copy.
 """
 import hashlib, json, os, re, sys
 import numpy as np
 import lameenc
-from piper import PiperVoice
-from piper.config import SynthesisConfig
+from kokoro_onnx import Kokoro
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 AUDIO = os.path.join(ROOT, 'audio')
+VOICE = 'af_heart'
 
-# Letter names, so a lone capital letter is read as its name ("T" -> "tee").
+# Letter names, so a lone capital letter is always read as its name ("T" -> "tee").
 LETTER_NAMES = {
     'A': 'ay', 'B': 'bee', 'C': 'see', 'D': 'dee', 'E': 'ee', 'F': 'eff', 'G': 'jee', 'H': 'aitch', 'J': 'jay',
     'K': 'kay', 'L': 'el', 'M': 'em', 'N': 'en', 'O': 'oh', 'P': 'pee', 'Q': 'cue', 'R': 'ar', 'S': 'ess', 'T': 'tee',
     'U': 'you', 'V': 'vee', 'W': 'double you', 'X': 'ex', 'Y': 'why', 'Z': 'zee',
 }
-# Phrases spoken from phonemes instead of text.
-PHONEMES = {
-    'a': ['ˈ', 'ʌ'],  # the sight word "a" is said "uh", not the letter name
+# Phrases spoken from different text.
+OVERRIDES = {
+    'a': 'uh.',  # the sight word "a" is said "uh", not the letter name
 }
 
 
 def tts_text(phrase):
-    t = re.sub(r'\bmagic e\b', 'magic ee', phrase)
-    t = re.sub(r'\b([A-HJ-Z])\b', lambda m: LETTER_NAMES[m.group(1)], t)
+    if phrase in OVERRIDES:
+        return OVERRIDES[phrase]
+    t = re.sub(r'\b([Mm]agic) e\b', r'\1 ee', phrase)
+
+    def letter(m):
+        # "A monkey!" starts with the article; "A is for apple" and "A, magic e" use the letter name
+        if m.group(1) == 'A' and m.start() == 0 and re.match(r' (?!is\b)[a-z]', t[m.end():]):
+            return 'A'
+        return LETTER_NAMES[m.group(1)]
+
+    t = re.sub(r'\b([A-HJ-Z])\b', letter, t)
+    # a lone word sounds complete (not cut off) when it ends like a sentence
+    if not re.search(r'[.!?:]$', t):
+        t += '.'
     return t
 
 
@@ -47,13 +61,13 @@ def old_manifest():
 
 
 def to_mp3(pcm, rate):
-    x = pcm.astype(np.float32)
-    # trim silence at both ends, keep a short pad
-    loud = np.where(np.abs(x) > 400)[0]
-    if len(loud):
-        pad = int(0.04 * rate)
-        x = x[max(0, loud[0] - pad): loud[-1] + pad]
+    x = np.asarray(pcm, dtype=np.float32)
+    # trim silence at both ends (relative to the peak, so quiet final consonants survive), keep a pad
     peak = np.abs(x).max() or 1.0
+    loud = np.where(np.abs(x) > 0.01 * peak)[0]
+    if len(loud):
+        pad = int(0.07 * rate)
+        x = x[max(0, loud[0] - pad): loud[-1] + pad]
     x = np.clip(x * (0.89 * 32767 / peak), -32767, 32767).astype(np.int16)
     enc = lameenc.Encoder()
     enc.set_bit_rate(48)
@@ -63,27 +77,18 @@ def to_mp3(pcm, rate):
     return enc.encode(x.tobytes()) + enc.flush()
 
 
-def main(model, redo=()):
-    voice = PiperVoice.load(model)
-    rate = voice.config.sample_rate
+def main(model, voices, redo=(), everything=False):
+    kokoro = Kokoro(model, voices)
     phrases = json.load(open(os.path.join(ROOT, 'tools', 'phrases.json')))
     os.makedirs(AUDIO, exist_ok=True)
-    old = old_manifest()
+    old = {} if everything else old_manifest()
     manifest, made = {}, 0
     for ph in phrases:
         if ph in old and ph not in redo and os.path.exists(os.path.join(AUDIO, old[ph])):
             manifest[ph] = old[ph]
             continue
-        words = len(ph.split())
-        cfg = SynthesisConfig(length_scale=1.18 if words <= 2 else 1.07, noise_scale=0.6, noise_w_scale=0.7)
-        if ph in PHONEMES:
-            ids = voice.phonemes_to_ids(PHONEMES[ph])
-            pcm = voice.phoneme_ids_to_audio(ids, cfg)
-            pcm = np.asarray(pcm)
-            if pcm.dtype != np.int16:
-                pcm = (np.clip(pcm, -1, 1) * 32767).astype(np.int16)
-        else:
-            pcm = np.concatenate([np.frombuffer(c.audio_int16_bytes, dtype=np.int16) for c in voice.synthesize(tts_text(ph), cfg)])
+        speed = 0.85 if len(ph.split()) <= 2 else 0.92  # single words a little slower
+        pcm, rate = kokoro.create(tts_text(ph), voice=VOICE, speed=speed, lang='en-us')
         mp3 = to_mp3(pcm, rate)
         manifest[ph] = clip_name(mp3)
         with open(os.path.join(AUDIO, manifest[ph]), 'wb') as f:
@@ -104,4 +109,8 @@ if __name__ == '__main__':
     args = sys.argv[1:]
     redo = set(args[args.index('--redo') + 1:]) if '--redo' in args else set()
     args = args[:args.index('--redo')] if '--redo' in args else args
-    main(args[0] if args else 'en_US-ljspeech-high.onnx', redo)
+    everything = '--all' in args
+    args = [a for a in args if a != '--all']
+    if len(args) < 2:
+        sys.exit(__doc__)
+    main(args[0], args[1], redo, everything)

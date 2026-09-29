@@ -456,13 +456,14 @@ const T = {
   drawIntroShow:'Draw something you can read! Then tap a word. 🎨', drawIntro:'Draw something you can read or spell! Then tap a word for your picture.',
   yourPicture:'Your picture is:', greatDrawing:'Great drawing!',
 };
+const article = w => /^(a|e|i|o|u(?!ni))/i.test(w) ? 'an' : 'a';   // an owl, a unicorn
 const P = {
   lesson: n => `Lesson ${n}!`,
   playLesson: n => `Let's play lesson ${n}!`,
   finished: n => `You finished lesson ${n}!`,
   playAct: name => `Let's play ${name}.`,
-  gotSticker: name => `You got a ${name} sticker!`,
-  aSticker: name => `A ${name}!`,
+  gotSticker: name => `You got ${article(name)} ${name} sticker!`,
+  aSticker: name => `${article(name) === 'an' ? 'An' : 'A'} ${name}!`,
   finishFor: n => `Finish lesson ${n} to get this sticker!`,
   haveStickers: c => `You have ${c} sticker${c > 1 ? 's' : ''}!`,
   popLetter: s => isMagicSound(s) ? `Find ${soundName(s)}. ${s[0].toUpperCase()}, like ${SOUND[s][0]}.` : `Pop the letter ${s.toUpperCase()}! ${s.toUpperCase()}, ${SOUND[s][0]}.`,
@@ -573,16 +574,18 @@ const Speech = {
   },
   file: phrase => CLIPS[norm(phrase)] || null,
   url(phrase){ const f = this.file(phrase); return f ? (this.blobs.get(f) || 'audio/' + f) : null; },
-  // Fetch clips in the background so they play instantly later.
-  preload(phrases){
-    for (const ph of phrases){ const f = this.file(ph); if (f && !this.blobs.has(f) && !this.queue.includes(f)) this.queue.push(f); }
+  // Fetch clips in the background so they play instantly later (first = jump the queue).
+  preload(phrases, first){
+    const add = [];
+    for (const ph of phrases){ const f = this.file(ph); if (f && !this.blobs.has(f) && !add.includes(f)) add.push(f); }
+    this.queue = first ? [...add, ...this.queue.filter(f => !add.includes(f))] : [...this.queue, ...add.filter(f => !this.queue.includes(f))];
     const pump = () => {
       while (this.loading < 6 && this.queue.length){
         const f = this.queue.shift();
         if (this.blobs.has(f)) continue;
         this.loading++;
         fetch('audio/' + f).then(r => r.ok ? r.blob() : Promise.reject(r.status))
-          .then(b => { this.blobs.set(f, URL.createObjectURL(b)); })
+          .then(b => { this.blobs.set(f, URL.createObjectURL(new Blob([b], {type:'audio/mpeg'}))); })
           .catch(() => {})
           .finally(() => { this.loading--; pump(); });
       }
@@ -876,7 +879,7 @@ function showLesson(l){
         h('span', {class:'nm'}, actName(l, a)));
     }))
   );
-  Speech.preload(lessonPhrases(l));
+  Speech.preload(lessonPhrases(l), true);
   if (next) say(`Lesson ${l.n}! Tap ${actIcon(l, next)} ${actName(l, next)}.`, [P.lesson(l.n), P.playAct(actName(l, next))]);
   else say(`You finished lesson ${l.n}! 🎉 Play again?`, [P.finished(l.n), T.playAgain]);
 }
@@ -891,7 +894,7 @@ function showActivity(l, a){
     progress: f => { bar.style.width = Math.round(Math.max(0, Math.min(1, f)) * 100) + '%'; },
     done: () => { if (id === navId) finishActivity(l, a); },
   };
-  Speech.preload(lessonPhrases(l));
+  Speech.preload(lessonPhrases(l), true);
   mount(
     h('header', {class:'topbar act-head'},
       backBtn('#/lesson/' + l.n),
@@ -915,7 +918,7 @@ function finishActivity(l, a){
     overlay([
       h('div', {class:'big-star'}, emo),
       h('h1', {}, 'Lesson done!'),
-      h('p', {}, `You got a ${name} sticker!`),
+      h('p', {}, P.gotSticker(name)),
       h('div', {class:'row'},
         nextLesson ? h('button', {class:'btn green big', onclick:() => go('#/lesson/' + nextLesson.n)}, `Lesson ${nextLesson.n} ➜`) : null,
         h('button', {class:'btn pink', onclick:() => go('#/stickers')}, '🏆 My stickers'),
@@ -1639,7 +1642,9 @@ function lessonPhrases(l){
   const name = STICKERS[l.n - 1][1];
   return uniq([
     P.lesson(l.n), P.playLesson(l.n), P.finished(l.n), P.gotSticker(name), P.aSticker(name), P.finishFor(l.n), P.haveStickers(l.n),
-    ...l.sounds.flatMap(x => [soundSay(x), P.popLetter(x)]),
+    ...l.sounds.flatMap(x => [soundSay(x), P.popLetter(x), P.thatIs(x), P.find(x), soundName(x)]),
+    ...uniq(allWords(l).join('').split('')).map(soundName),
+    ...ACTS.map(a => P.playAct(actName(l, a))),
     ...allWords(l), ...hfWords(l),
     ...(l.pairs || []).map(p => P.magicMakes(p[1][firstVowel(p[1])])),
     ...l.sentences.flatMap(([text]) => [text, ...text.split(' ').map(cleanWord)]),
@@ -1664,7 +1669,7 @@ overlay([
   h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
     audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win();
     closeOverlay();
-    Speech.preload(globalPhrases());
+    Speech.preload([...Object.values(T), ...PRAISE, ...TRY]);
     const greet = location.hash.length > 2 ? null : T.greet;
     if (greet) say(T.greetShow, greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
     else route();
