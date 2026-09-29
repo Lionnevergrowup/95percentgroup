@@ -24,7 +24,7 @@ Each lesson has 7 short activities that follow the workbook page:
 - A friendly lion (Leo) speaks every instruction out loud, so children don't need to read directions yet. Tap Leo to hear it again.
 - Leo's voice is pre-recorded (`audio/`, 600+ short MP3 clips), so it works in any browser: WeChat, Android phones without an English speech engine, and iPhones with the silent switch on. 语音是预先录好的，微信里、没有英文语音引擎的安卓手机、iPhone 静音模式下都能听到。
 - Children earn a ⭐ for each activity and an animal sticker 🏆 for each finished lesson.
-- **Parents page (👪)**: the Quick Parent Guide (English + 中文), voice speed, sound effects on/off, a sound test with tips if nothing plays, and a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons.
+- **Parents page (👪)**: the Quick Parent Guide, voice speed, sound effects on/off, a sound test with tips if nothing plays, a "Refresh to latest version" button, and a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons.
 - Progress is saved in this browser on this device (localStorage). Nothing is sent anywhere.
 
 ## Tips · 使用提示
@@ -32,6 +32,7 @@ Each lesson has 7 short activities that follow the workbook page:
 - Turn the volume up. 请把音量调大。If there is still no sound, open the page in a normal browser (in WeChat: tap "…" → "Open in browser") and check that no Bluetooth speaker or headphones are connected.
 - Practice 10–15 minutes at a time. 每次练习 10–15 分钟。
 - You can add the page to your home screen (Share → Add to Home Screen) so it opens like an app.
+- After an update, tap 🔄 (top right of the home screen) to force the newest version to load. 更新后点主页右上角的 🔄 强制刷新。
 
 ## Deploy with GitHub Pages · 部署
 

@@ -259,8 +259,8 @@ button{font-family:inherit;color:inherit}
 /* parents */
 .panel-card{background:#fff;border-radius:24px;box-shadow:0 6px 0 var(--line);padding:18px 20px;margin-bottom:18px;-webkit-user-select:text;user-select:text}
 .panel-card h2{margin:0 0 10px;font-size:1.35rem}
-.panel-card p,.panel-card li{font-size:1.05rem;line-height:1.55;font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
-.panel-card .zh{color:var(--ink-soft)}
+.panel-card p,.panel-card li{font-size:1.05rem;line-height:1.55;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
+.panel-card .note{color:var(--ink-soft)}
 .panel-card ul{padding-left:1.2em;margin:6px 0}
 .seg{display:inline-flex;flex-wrap:wrap;gap:8px}
 .seg button{border:0;border-radius:14px;padding:.45em .9em;font-size:1.05rem;font-weight:600;background:#f1eefc;cursor:pointer;min-height:44px}
@@ -269,7 +269,7 @@ button{font-family:inherit;color:inherit}
 .setting>label{font-weight:600;min-width:150px}
 .setting select{font-size:1rem;padding:.4em;border-radius:10px;border:2px solid var(--line);max-width:100%}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table.prog{border-collapse:collapse;width:100%;min-width:560px;font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
+table.prog{border-collapse:collapse;width:100%;min-width:560px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
 table.prog th,table.prog td{padding:7px 8px;border-bottom:1px solid #eee9fb;text-align:center;font-size:.98rem}
 table.prog th{background:#f6f4ff;position:sticky;top:0}
 table.prog td.l{text-align:left}
@@ -324,11 +324,12 @@ table.prog td.l small{color:var(--ink-soft)}
   .act-head .act-title .nm{display:none}
   .act-grid{grid-template-columns:repeat(2,1fr);gap:16px 12px}
   .lesson-grid{grid-template-columns:repeat(3,1fr);gap:16px 12px}
-  .icon-btn{width:50px;height:50px;font-size:1.4rem}
-  .topbar{gap:8px}
+  .icon-btn{width:46px;height:46px;font-size:1.3rem}
+  .topbar{gap:7px}
   .brand .logo{display:none}
-  .brand{font-size:1.5rem}
-  .pill{font-size:1.1rem;padding:.3em .65em}
+  .brand{font-size:1.35rem}
+  .brand .name{overflow:hidden;text-overflow:ellipsis}
+  .pill{font-size:1.05rem;padding:.3em .6em}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
@@ -338,7 +339,7 @@ table.prog td.l small{color:var(--ink-soft)}
 <body>
 <div id="app"></div>
 <noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
-<script src="audio/manifest.js"></script>
+<script>document.write('<script src="audio/manifest.js' + (/[?&]v=\d+/.test(location.search) ? '?' + location.search.match(/v=\d+/)[0] : '') + '"><\/script>');</script>
 <script>
 (() => {
 'use strict';
@@ -804,7 +805,7 @@ const isDone = (n, k) => !!(state.done[n] && state.done[n][k]);
 const doneCount = n => ACTS.filter(a => isDone(n, a.key)).length;
 const lessonComplete = n => doneCount(n) === ACTS.length;
 const totalStars = () => LESSONS.reduce((t, l) => t + doneCount(l.n), 0);
-const PARENT_CHECK = [['Sounds','说发音',['sounds']],['Words','读单词',['read','sight']],['Writing','书写',['trace','spell']],['Sentence','读句子',['sentence']]];
+const PARENT_CHECK = [['Sounds',['sounds']],['Words',['read','sight']],['Writing',['trace','spell']],['Sentence',['sentence']]];
 
 const COLORS = [['var(--purple)','var(--purple-d)'],['var(--pink)','var(--pink-d)'],['var(--blue)','var(--blue-d)'],['var(--green)','var(--green-d)'],['var(--orange)','var(--orange-d)'],['var(--teal)','var(--teal-d)']];
 const lessonColor = l => l.review ? ['var(--gold)','var(--gold-d)'] : COLORS[(l.n - 1) % COLORS.length];
@@ -834,7 +835,8 @@ function showHome(){
       h('div', {class:'brand'}, h('span', {class:'logo'}, '🦁'), h('span', {class:'name'}, 'Phonics Fun')),
       starPill(),
       h('button', {class:'icon-btn', 'aria-label':'My stickers', onclick:() => { Sfx.tap(); go('#/stickers'); }}, '🏆'),
-      h('button', {class:'icon-btn', 'aria-label':'For parents', onclick:() => { Sfx.tap(); go('#/parents'); }}, '👪')),
+      h('button', {class:'icon-btn', 'aria-label':'For parents', onclick:() => { Sfx.tap(); go('#/parents'); }}, '👪'),
+      h('button', {class:'icon-btn', 'aria-label':'Refresh to the latest version', title:'Refresh', onclick:() => forceRefresh()}, '🔄')),
     groups.map(([title, a, b]) => [
       h('h2', {class:'section-title'}, title),
       h('div', {class:'lesson-grid'}, LESSONS.slice(a - 1, b).map(l => lessonBtn(l, l === next))),
@@ -961,44 +963,45 @@ function showParents(){
   };
   const tick = ok => ok ? '✅' : '⬜';
   mount(
-    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, '👪 Parents · 家长')),
+    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, '👪 For Parents')),
     h('section', {class:'panel-card'},
-      h('h2', {}, 'Quick Parent Guide · 家长指南'),
+      h('h2', {}, 'Quick Parent Guide'),
       h('p', {}, 'Practice 10–15 minutes at a time. Have the child say each sound, blend sounds into words, and then write the word. For silent-e lessons, compare the short-vowel word with the long-vowel word.'),
-      h('p', {class:'zh'}, '每次练习 10–15 分钟。让孩子先说出每个字母的发音，再把发音拼读成单词，然后写出单词。在 silent-e（魔法 e）课中，对比短元音单词和长元音单词（例如 cap → cape）。'),
       h('ul', {},
-        h('li', {}, '🔤 Sounds — “Say the sounds” · 说发音（点卡片听，再玩气球找字母）'),
-        h('li', {}, '✏️ Trace — write each sound · 用手指描写字母'),
-        h('li', {}, '📖 Read Words / ✨ Magic e — “Read the words” · 拼读单词、对比 cap → cape'),
-        h('li', {}, '👀 Sight Words — high-frequency words · 高频词'),
-        h('li', {}, '🧩 Spell It — “Write the words” + “Dictation” · 听音拼词'),
-        h('li', {}, '💬 Sentence — “Read a sentence” · 读句子、排句子'),
-        h('li', {}, '🎨 Draw — “Draw and label” · 画画并选一个单词做标签（可保存图片）')),
-      h('p', {class:'zh'}, '提示：请打开声音；平板或电脑体验最好。进度只保存在这台设备的浏览器里。点左下角的小狮子可以再听一遍。')),
+        h('li', {}, '🔤 Sounds: “Say the sounds.” Tap the letter cards, then pop the balloon with the sound Leo says.'),
+        h('li', {}, '✏️ Trace: write each sound with a finger.'),
+        h('li', {}, '📖 Read Words / ✨ Magic e: “Read the words.” Sound out each word; in silent-e lessons compare cap → cape.'),
+        h('li', {}, '👀 Sight Words: the high-frequency words for the lesson.'),
+        h('li', {}, '🧩 Spell It: “Write the words” and “Dictation.” Hear a word and tap its letters in order.'),
+        h('li', {}, '💬 Sentence: “Read a sentence.” Read along, then put the words in order.'),
+        h('li', {}, '🎨 Draw: “Draw and label.” Draw a picture, pick a word for it, and save it if you like.')),
+      h('p', {class:'note'}, 'Tips: turn the sound on; a tablet works best. Progress is saved in this browser on this device only. Tap Leo (bottom left) to hear an instruction again.')),
     h('section', {class:'panel-card'},
-      h('h2', {}, 'Settings · 设置'),
-      h('div', {class:'setting'}, h('label', {}, 'Voice speed · 语速'),
+      h('h2', {}, 'Settings'),
+      h('div', {class:'setting'}, h('label', {}, 'Voice speed'),
         seg([['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak(T.readingVoice); })),
-      h('div', {class:'setting'}, h('label', {}, 'Sound effects · 音效'),
+      h('div', {class:'setting'}, h('label', {}, 'Sound effects'),
         seg([['🔔 On', true], ['🔕 Off', false]], state.settings.sfx, v => { state.settings.sfx = v; saveState(); Sfx.good(); })),
-      h('div', {class:'setting'}, h('label', {}, 'Sound test · 声音测试'),
-        h('button', {class:'btn blue', onclick:() => { Sfx.good(); Speech.speak(T.readingVoice); }}, '🔊 Test · 试听')),
-      h('p', {class:'zh'}, '听不到声音？① 把音量调大；② 在微信里打开的，请点右上角「…」→「在浏览器打开」；③ 蓝牙耳机/音箱连着的话，声音会从那里出来。')),
+      h('div', {class:'setting'}, h('label', {}, 'Sound test'),
+        h('button', {class:'btn blue', onclick:() => { Sfx.good(); Speech.speak(T.readingVoice); }}, '🔊 Test sound')),
+      h('p', {class:'note'}, 'No sound? Turn the volume up. If the page is open inside an app such as WeChat, open it in the phone’s browser instead (tap “…” → “Open in browser”). If Bluetooth headphones or a speaker are connected, the sound plays there.'),
+      h('div', {class:'setting'}, h('label', {}, 'Update'),
+        h('button', {class:'btn teal', onclick:() => forceRefresh()}, '🔄 Refresh to latest version'))),
     h('section', {class:'panel-card'},
-      h('h2', {}, 'Parent/teacher check · 学习记录'),
+      h('h2', {}, 'Parent/teacher check'),
       h('div', {class:'table-wrap'}, h('table', {class:'prog'},
-        h('thead', {}, h('tr', {}, h('th', {}, 'Lesson'), PARENT_CHECK.map(([en, zh]) => h('th', {}, en, h('br'), h('small', {}, zh))))),
+        h('thead', {}, h('tr', {}, h('th', {}, 'Lesson'), PARENT_CHECK.map(([name]) => h('th', {}, name)))),
         h('tbody', {}, LESSONS.map(l => h('tr', {},
           h('td', {class:'l'}, h('b', {}, `${l.n}. ${l.focus}`), h('br'), h('small', {}, 'HF: ' + hfWords(l).join(', '))),
-          PARENT_CHECK.map(([, , keys]) => h('td', {}, tick(keys.every(k => isDone(l.n, k)))))))))),
+          PARENT_CHECK.map(([, keys]) => h('td', {}, tick(keys.every(k => isDone(l.n, k)))))))))),
       h('div', {class:'row', style:{marginTop:'14px', justifyContent:'flex-start'}},
         h('button', {class:'btn red', onclick:() => {
           const a = 2 + Math.floor(Math.random() * 7), b = 2 + Math.floor(Math.random() * 7);
-          const ans = window.prompt(`Reset all progress? Parents only.\n清除全部进度？请家长回答：${a} + ${b} = ?`);
+          const ans = window.prompt(`Reset all progress? Parents only: what is ${a} + ${b}?`);
           if (ans != null && +ans === a + b){ state.done = {}; saveState(); route(); }
-        }}, '🗑️ Reset progress · 清除进度'))),
+        }}, '🗑️ Reset progress'))),
     h('section', {class:'panel-card'},
-      h('p', {class:'zh'}, 'Based on the “Kindergarten Phonics Practice — 25-Lesson Home Practice Book” (original supplemental practice aligned to the Grade K lesson progression). It does not reproduce the commercial Student Workbook.'))
+      h('p', {class:'note'}, 'Based on the “Kindergarten Phonics Practice — 25-Lesson Home Practice Book” (original supplemental practice aligned to the Grade K lesson progression). It does not reproduce the commercial Student Workbook.'))
   );
   say(T.hiGrownUps + ' 👋', T.hiGrownUps);
 }
@@ -1607,6 +1610,19 @@ function actDraw(ctx){
   cleanups.push(() => ro.disconnect());
 }
 
+/* ---------- force refresh ---------- */
+async function forceRefresh(){
+  Speech.stop();
+  overlay([h('div', {class:'big-star'}, '🔄'), h('h1', {}, 'Updating…'), h('p', {}, 'Getting the newest version')]);
+  const base = location.pathname.replace(/[^/]*$/, '');
+  const urls = [location.pathname, base + 'index.html', base + 'audio/manifest.js', base + 'fonts/andika-700-latin.woff2', base + 'fonts/fredoka-latin.woff2'];
+  try {
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k);
+    await Promise.race([Promise.all(urls.map(u => fetch(u, {cache:'reload'}).catch(() => {}))), wait(6000)]);
+  } catch (e) {}
+  location.replace(location.pathname + '?v=' + Date.now() + location.hash);
+}
+
 /* =====================================================================
    PHRASES — every line Leo can say (tools/build_audio.py records these)
    ===================================================================== */
@@ -1636,6 +1652,7 @@ window.__phonicsPhrases = allPhrases;
    START
    ===================================================================== */
 Speech.init();
+if (/[?&]v=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
 window.addEventListener('hashchange', route);
 document.addEventListener('visibilitychange', () => { if (document.hidden) Speech.stop(); });
 route();
@@ -1643,7 +1660,7 @@ overlay([
   h('div', {class:'hero-lion'}, '🦁'),
   h('h1', {}, 'Phonics Fun!'),
   h('p', {}, 'Kindergarten phonics · 25 lessons'),
-  h('p', {style:{fontSize:'1.05rem', margin:'-8px 0 16px'}}, '🔊 Turn the sound on · 请打开声音'),
+  h('p', {style:{fontSize:'1.05rem', margin:'-8px 0 16px'}}, '🔊 Turn the sound on!'),
   h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
     audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win();
     closeOverlay();

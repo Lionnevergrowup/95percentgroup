@@ -4,8 +4,9 @@ Voice: Piper TTS with the public-domain LJSpeech voice (en_US-ljspeech-high).
 Usage:
   pip install piper-tts lameenc numpy
   node tools/export_phrases.js
-  python3 tools/build_audio.py path/to/en_US-ljspeech-high.onnx
-Existing clips are reused, so re-running only records new phrases.
+  python3 tools/build_audio.py path/to/en_US-ljspeech-high.onnx [--redo "phrase" ...]
+Existing clips are reused, so re-running only records new phrases (and any passed with --redo).
+A newly recorded clip is named after its content, so browsers never play a stale cached copy.
 """
 import hashlib, json, os, re, sys
 import numpy as np
@@ -34,8 +35,15 @@ def tts_text(phrase):
     return t
 
 
-def clip_name(phrase):
-    return hashlib.sha1(phrase.encode('utf-8')).hexdigest()[:12] + '.mp3'
+def clip_name(mp3):
+    return hashlib.sha1(mp3).hexdigest()[:12] + '.mp3'
+
+
+def old_manifest():
+    path = os.path.join(AUDIO, 'manifest.js')
+    if not os.path.exists(path):
+        return {}
+    return json.loads(open(path, encoding='utf-8').read().split('=', 1)[1].strip().rstrip(';'))
 
 
 def to_mp3(pcm, rate):
@@ -55,17 +63,16 @@ def to_mp3(pcm, rate):
     return enc.encode(x.tobytes()) + enc.flush()
 
 
-def main(model):
+def main(model, redo=()):
     voice = PiperVoice.load(model)
     rate = voice.config.sample_rate
     phrases = json.load(open(os.path.join(ROOT, 'tools', 'phrases.json')))
     os.makedirs(AUDIO, exist_ok=True)
+    old = old_manifest()
     manifest, made = {}, 0
     for ph in phrases:
-        name = clip_name(ph)
-        manifest[ph] = name
-        out = os.path.join(AUDIO, name)
-        if os.path.exists(out):
+        if ph in old and ph not in redo and os.path.exists(os.path.join(AUDIO, old[ph])):
+            manifest[ph] = old[ph]
             continue
         words = len(ph.split())
         cfg = SynthesisConfig(length_scale=1.18 if words <= 2 else 1.07, noise_scale=0.6, noise_w_scale=0.7)
@@ -77,8 +84,10 @@ def main(model):
                 pcm = (np.clip(pcm, -1, 1) * 32767).astype(np.int16)
         else:
             pcm = np.concatenate([np.frombuffer(c.audio_int16_bytes, dtype=np.int16) for c in voice.synthesize(tts_text(ph), cfg)])
-        with open(out, 'wb') as f:
-            f.write(to_mp3(pcm, rate))
+        mp3 = to_mp3(pcm, rate)
+        manifest[ph] = clip_name(mp3)
+        with open(os.path.join(AUDIO, manifest[ph]), 'wb') as f:
+            f.write(mp3)
         made += 1
     # remove clips no longer used
     keep = set(manifest.values())
@@ -92,4 +101,7 @@ def main(model):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1] if len(sys.argv) > 1 else 'en_US-ljspeech-high.onnx')
+    args = sys.argv[1:]
+    redo = set(args[args.index('--redo') + 1:]) if '--redo' in args else set()
+    args = args[:args.index('--redo')] if '--redo' in args else args
+    main(args[0] if args else 'en_US-ljspeech-high.onnx', redo)
