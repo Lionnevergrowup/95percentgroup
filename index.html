@@ -9,6 +9,10 @@
 <title>Phonics Fun</title>
 <meta name="description" content="Kindergarten phonics practice game: 25 lessons of letter sounds, tracing, word reading, sight words, spelling, sentences and drawing.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%81%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="Phonics Fun">
 <link rel="preload" href="fonts/andika-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -20,14 +24,14 @@
 :root{
   --ink:#2b2250; --ink-soft:#5f5886; --line:#d9d3f3;
   --bg1:#aee3ff; --bg2:#fff4d6;
-  --purple:#7c5cff; --purple-d:#5a3fd6;
+  --purple:#6c4cf0; --purple-d:#4f33c9;
   --pink:#ff5fa2;   --pink-d:#d63f80;
   --orange:#ff9f1c; --orange-d:#d27a00;
   --yellow:#ffd23f; --yellow-d:#dcae00;
   --green:#22c07a;  --green-d:#15965c;
-  --blue:#3d8bfd;   --blue-d:#1f66d1;
+  --blue:#1f6fe0;   --blue-d:#1552b0;
   --teal:#18b8c9;   --teal-d:#0e8f9c;
-  --red:#ff5a5f;    --red-d:#d33a40;
+  --red:#d63031;    --red-d:#a82224;
   --gold:#f5b700;   --gold-d:#c28f00;
   --font-ui:'Fredoka','Nunito','Trebuchet MS',system-ui,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji';
   --font-read:'Andika','Comic Sans MS','Chalkboard SE',system-ui,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji';
@@ -47,7 +51,10 @@ body{
     linear-gradient(180deg,var(--bg1) 0%,#d8f1ff 50%,var(--bg2) 100%);
   background-attachment:fixed;
   -webkit-user-select:none;user-select:none;touch-action:manipulation;overflow-x:hidden;
+  -webkit-touch-callout:none;   /* no "Copy / Look Up" pop-up when a child long-presses */
+  overscroll-behavior-y:contain; /* a downward swipe must not reload the page (Android pull-to-refresh) */
 }
+html{overscroll-behavior-y:contain}
 button{font-family:inherit;color:inherit}
 [hidden]{display:none!important}
 .sound-card .pic,.word-card .wpic,.quiz-pic,.spell-pic,.sent-pic,.magic-pic,.trace-top .tp,.big-star,.hero-lion,
@@ -68,6 +75,8 @@ button{font-family:inherit;color:inherit}
 .btn.green{--c:var(--green);--d:var(--green-d)} .btn.blue{--c:var(--blue);--d:var(--blue-d)}
 .btn.orange{--c:var(--orange);--d:var(--orange-d)} .btn.pink{--c:var(--pink);--d:var(--pink-d)}
 .btn.teal{--c:var(--teal);--d:var(--teal-d)} .btn.red{--c:var(--red);--d:var(--red-d)}
+/* bright backgrounds get dark text so it stays readable (WCAG contrast) */
+.btn.green,.btn.orange,.btn.pink,.btn.teal{color:var(--ink);text-shadow:0 1px 0 rgba(255,255,255,.35)}
 .btn.white{--c:#fff;--d:var(--line);color:var(--ink);text-shadow:none}
 .btn.big{font-size:clamp(1.3rem,4.2vw,1.7rem);min-height:68px;padding:.5em 1.4em}
 .icon-btn{
@@ -79,6 +88,7 @@ button{font-family:inherit;color:inherit}
 
 /* ---------- top bar ---------- */
 .topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.topbar h1{margin:0}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-size:clamp(1.5rem,5vw,2.3rem);font-weight:700;min-width:0}
 .brand .logo{font-size:1.25em;animation:bob 3s ease-in-out infinite}
 .brand .name{background:linear-gradient(90deg,var(--purple),var(--pink),var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
@@ -95,11 +105,16 @@ button{font-family:inherit;color:inherit}
 }
 .lesson-btn:active{transform:translateY(4px);box-shadow:0 3px 0 var(--d)}
 .lesson-btn .num{font-size:clamp(2rem,6vw,2.6rem);font-weight:700;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.15)}
-.lesson-btn .letters{font-family:var(--font-read);font-weight:700;font-size:1.1rem;background:rgba(255,255,255,.28);border-radius:999px;padding:0 .55em;margin-top:5px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.lesson-btn .letters{font-family:var(--font-read);font-weight:700;font-size:1.1rem;background:rgba(0,0,0,.2);border-radius:999px;padding:0 .55em;margin-top:5px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .lesson-btn .letters.small{font-size:.9rem}
 .dots{display:flex;gap:3px;margin-top:7px}
 .dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35)}
 .dots i.on{background:#fff}
+.lesson-btn.ink{color:var(--ink)}
+.lesson-btn.ink .num{text-shadow:0 2px 0 rgba(255,255,255,.35)}
+.lesson-btn.ink .letters{background:rgba(255,255,255,.4)}
+.lesson-btn.ink .dots i{background:rgba(43,34,80,.22)}
+.lesson-btn.ink .dots i.on{background:var(--ink)}
 .lesson-btn .sticker{position:absolute;top:-12px;right:-8px;font-size:2.1rem;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));animation:bob 2.6s ease-in-out infinite}
 .lesson-btn.next{animation:pulse 1.6s ease-in-out infinite}
 .lesson-btn.next::after{content:'▶';position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);background:var(--yellow);color:var(--ink);font-size:.8rem;border-radius:999px;padding:2px 8px;box-shadow:0 3px 0 var(--yellow-d)}
@@ -159,6 +174,7 @@ button{font-family:inherit;color:inherit}
 .balloon::before{content:'';position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);border:8px solid transparent;border-bottom:10px solid var(--c);border-top:0}
 .balloon::after{content:'';position:absolute;left:50%;top:100%;margin-top:1px;width:2px;height:40px;background:#8f88b8}
 .balloon.pop{animation:pop .35s ease-out forwards}
+.balloon.ink{color:var(--ink);text-shadow:0 2px 0 rgba(255,255,255,.4)}
 .balloon.bubble-word{
   border-radius:50%;width:clamp(118px,25vw,168px);height:clamp(118px,25vw,168px);font-size:clamp(1.6rem,5.6vw,2.5rem);
   background:radial-gradient(circle at 30% 27%,rgba(255,255,255,.9) 0 8%,transparent 9%),radial-gradient(circle,transparent 58%,rgba(255,255,255,.5) 70%,transparent 72%),var(--c);
@@ -186,7 +202,7 @@ button{font-family:inherit;color:inherit}
   border:0;border-radius:28px;background:#fff;box-shadow:0 8px 0 var(--line);padding:14px 22px 10px;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:2px;min-width:clamp(130px,26vw,190px)
 }
-.word-card .arrow{font-size:1.4rem;color:var(--orange);font-weight:700}
+.word-card .arrow{font-size:1.4rem;color:#b35c00;font-weight:700}
 .word-card .wpic{font-size:2.2rem;min-height:1.2em;line-height:1.2}
 
 /* magic e */
@@ -363,11 +379,11 @@ table.prog td.l small{color:var(--ink-soft)}
   .mascot .lion{font-size:42px}
   .mascot .bubble{font-size:.9rem;padding:6px 12px;margin-bottom:10px;max-width:min(440px,52vw)}
   .trace-top{display:none}
-  .trace-wrap{height:calc(100vh - 142px);min-height:160px}
+  .trace-wrap{height:calc(100vh - 142px);height:calc(100dvh - 142px);min-height:160px}
   .draw-tools{gap:5px}
   .swatch{width:32px;height:32px;border-width:3px}
   .tool{width:36px;height:36px;font-size:1.1rem}
-  .draw-wrap{height:calc(100vh - 176px);min-height:140px}
+  .draw-wrap{height:calc(100vh - 176px);height:calc(100dvh - 176px);min-height:140px}
   .word-bank .wchip{font-size:1.15rem}
   .slot{width:52px;height:62px;font-size:2.1rem}
   .tile{width:52px;height:56px;font-size:2rem}
@@ -403,7 +419,7 @@ table.prog td.l small{color:var(--ink-soft)}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<main id="app"></main>
 <noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
 <script>document.write('<script src="audio/manifest.js' + (/[?&]v=\d+/.test(location.search) ? '?' + location.search.match(/v=\d+/)[0] : '') + '"><\/script>');</script>
 <script>
@@ -789,7 +805,7 @@ const Sfx = {
 function confetti(n = 50){
   const colors = ['#ff5fa2','#ffd23f','#22c07a','#3d8bfd','#7c5cff','#ff9f1c','#18b8c9'];
   for (let i = 0; i < n; i++){
-    const c = h('i', {class:'confetti', style:{
+    const c = h('i', {class:'confetti', 'aria-hidden':'true', style:{
       left: Math.random() * 100 + 'vw', background: colors[i % colors.length],
       '--dx': (Math.random() * 240 - 120) + 'px', '--rot': (Math.random() * 900 - 450) + 'deg',
       animationDuration: (1.6 + Math.random() * 1.5) + 's', animationDelay: (Math.random() * 0.35) + 's'}});
@@ -802,7 +818,7 @@ function burst(el){
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
   for (let k = 0; k < 10; k++){
     const ang = k / 10 * Math.PI * 2, dist = 60 + Math.random() * 60;
-    const s = h('span', {class:'spark', style:{left:cx + 'px', top:cy + 'px', '--tx':Math.cos(ang) * dist + 'px', '--ty':Math.sin(ang) * dist + 'px'}}, pick(['⭐','✨','🌟']));
+    const s = h('span', {class:'spark', 'aria-hidden':'true', style:{left:cx + 'px', top:cy + 'px', '--tx':Math.cos(ang) * dist + 'px', '--ty':Math.sin(ang) * dist + 'px'}}, pick(['⭐','✨','🌟']));
     document.body.append(s);
     setTimeout(() => s.remove(), 900);
   }
@@ -819,6 +835,7 @@ function watchSize(el, fn){
 }
 // Finger or mouse strokes on a canvas. Only the first finger draws, so a resting palm or a second finger is ignored.
 function onStrokes(el, {down, move, up}){
+  el.addEventListener('contextmenu', e => e.preventDefault());
   const pos = e => { const r = el.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
   if (window.PointerEvent){
     let id = null;
@@ -867,7 +884,7 @@ const bounce = el => replayAnim(el, 'bounce');
 let lastSay = null, sayCount = 0, bubbleTimer = null;
 const bubbleEl = h('div', {class:'bubble', 'aria-live':'polite'});
 const lionEl = h('button', {class:'lion', 'aria-label':'Hear it again', onclick:() => { if (lastSay) say(lastSay.text, lastSay.speech); }}, '🦁');
-const mascotEl = h('div', {class:'mascot'}, lionEl, bubbleEl);
+const mascotEl = h('aside', {class:'mascot', 'aria-label':'Leo the lion'}, lionEl, bubbleEl);
 document.body.append(mascotEl);
 // text = what the bubble shows, speech = what Leo says (so answers are never shown as text)
 function say(text, speech){
@@ -899,7 +916,10 @@ function go(hash){ if (location.hash === hash || (hash === '#/' && !location.has
 function mount(...nodes){ $('#app').replaceChildren(...nodes.flat(Infinity).filter(Boolean)); window.scrollTo(0, 0); }
 function overlay(content, cls = ''){
   closeOverlay();
-  overlayEl = h('div', {class:'overlay ' + cls}, h('div', {class:'panel'}, content));
+  const panel = h('div', {class:'panel', role:'dialog', 'aria-modal':'true'}, content);
+  const title = panel.querySelector('h1');
+  if (title){ title.id = 'dlg-title'; panel.setAttribute('aria-labelledby', 'dlg-title'); }
+  overlayEl = h('div', {class:'overlay ' + cls}, panel);
   document.body.append(overlayEl);
   return overlayEl;
 }
@@ -936,6 +956,7 @@ const lessonComplete = n => doneCount(n) === ACTS.length;
 const totalStars = () => LESSONS.reduce((t, l) => t + doneCount(l.n), 0);
 const PARENT_CHECK = [['Sounds',['sounds']],['Words',['read','sight']],['Writing',['trace','spell']],['Sentence',['sentence']]];
 
+const LIGHT_BG = new Set(['var(--pink)', 'var(--green)', 'var(--orange)', 'var(--teal)', 'var(--gold)', 'var(--yellow)']);
 const COLORS = [['var(--purple)','var(--purple-d)'],['var(--pink)','var(--pink-d)'],['var(--blue)','var(--blue-d)'],['var(--green)','var(--green-d)'],['var(--orange)','var(--orange-d)'],['var(--teal)','var(--teal-d)']];
 const lessonColor = l => l.review ? ['var(--gold)','var(--gold-d)'] : COLORS[(l.n - 1) % COLORS.length];
 
@@ -961,7 +982,7 @@ function showHome(){
   const groups = [['🔤 Letters & Short Vowels', 1, 16], ['⭐ Short Vowel Review', 17, 19], ['✨ Magic e (silent e)', 20, 25]];
   mount(
     h('header', {class:'topbar'},
-      h('div', {class:'brand'}, h('span', {class:'logo'}, '🦁'), h('span', {class:'name'}, 'Phonics Fun')),
+      h('h1', {class:'brand'}, h('span', {class:'logo', 'aria-hidden':'true'}, '🦁'), h('span', {class:'name'}, 'Phonics Fun')),
       starPill(),
       h('button', {class:'icon-btn', 'aria-label':'My stickers', onclick:() => { Sfx.tap(); go('#/stickers'); }}, '🏆'),
       h('button', {class:'icon-btn', 'aria-label':'For parents', onclick:() => { Sfx.tap(); go('#/parents'); }}, '👪'),
@@ -979,7 +1000,7 @@ function lessonBtn(l, isNext){
   const [c, d] = lessonColor(l);
   const cnt = doneCount(l.n);
   const status = cnt === ACTS.length ? ', finished' : cnt ? `, ${cnt} of ${ACTS.length} done` : '';
-  return h('button', {class:'lesson-btn' + (isNext ? ' next' : ''), style:{'--c':c, '--d':d}, 'aria-label':`Lesson ${l.n}: ${l.focus}${status}`,
+  return h('button', {class:'lesson-btn' + (isNext ? ' next' : '') + (LIGHT_BG.has(c) ? ' ink' : ''), style:{'--c':c, '--d':d}, 'aria-label':`Lesson ${l.n}: ${l.focus}${status}`,
       onclick:() => { Sfx.tap(); go('#/lesson/' + l.n); }},
     h('span', {class:'num'}, l.n),
     h('span', {class:'letters' + (l.label.length > 5 ? ' small' : '')}, l.label),
@@ -990,7 +1011,7 @@ function lessonBtn(l, isNext){
 function showLesson(l){
   const next = ACTS.find(a => !isDone(l.n, a.key));
   mount(
-    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, `Lesson ${l.n}`), starPill()),
+    h('header', {class:'topbar'}, backBtn('#/'), h('h1', {class:'title'}, `Lesson ${l.n}`), starPill()),
     h('section', {class:'lesson-hero'},
       h('div', {class:'hero-sounds'}, l.sounds.map(s => h('button', {class:'hero-chip', 'aria-label':'Hear ' + soundName(s),
         onclick:e => { Sfx.tap(); bounce(e.currentTarget); say(soundSay(s)); }}, s))),
@@ -1014,7 +1035,7 @@ function showLesson(l){
 
 function showActivity(l, a){
   const bar = h('i');
-  const stage = h('main', {class:'stage'});
+  const stage = h('div', {class:'stage'});
   const id = navId;
   const ctx = {
     lesson:l, stage, replay:null,
@@ -1026,7 +1047,7 @@ function showActivity(l, a){
   mount(
     h('header', {class:'topbar act-head'},
       backBtn('#/lesson/' + l.n),
-      h('div', {class:'act-title'}, actIcon(l, a), ' ', h('span', {class:'nm'}, actName(l, a))),
+      h('h1', {class:'act-title', 'aria-label':`Lesson ${l.n}: ${actName(l, a)}`}, actIcon(l, a), ' ', h('span', {class:'nm'}, actName(l, a))),
       h('div', {class:'progress', role:'progressbar', 'aria-label':'Progress'}, bar),
       h('button', {class:'icon-btn', 'aria-label':'Hear again', onclick:() => { Sfx.tap(); if (ctx.replay) ctx.replay(); }}, '🔊')),
     stage);
@@ -1071,7 +1092,7 @@ function finishActivity(l, a){
 function showStickers(){
   const count = LESSONS.filter(l => lessonComplete(l.n)).length;
   mount(
-    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, `🏆 My Stickers  ${count}/25`), starPill()),
+    h('header', {class:'topbar'}, backBtn('#/'), h('h1', {class:'title'}, `🏆 My Stickers  ${count}/25`), starPill()),
     h('div', {class:'sticker-grid'}, LESSONS.map(l => {
       const got = lessonComplete(l.n);
       const [emo, name] = STICKERS[l.n - 1];
@@ -1110,7 +1131,7 @@ function showParents(){
     return b;
   };
   mount(
-    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, '👪 For Parents')),
+    h('header', {class:'topbar'}, backBtn('#/'), h('h1', {class:'title'}, '👪 For Parents')),
     h('section', {class:'panel-card'},
       h('h2', {}, 'Quick Parent Guide'),
       h('p', {}, 'Practice 10–15 minutes at a time. Have the child say each sound, blend sounds into words, and then write the word. For silent-e lessons, compare the short-vowel word with the long-vowel word.'),
@@ -1220,7 +1241,8 @@ function actSounds(ctx){
     const prompt = () => say(T.popBalloon, P.popLetter(target));
     let solved = false, misses = 0;
     const balloons = opts.map((s, i) => {
-      const b = h('button', {class:'balloon', 'aria-label':'balloon ' + s, style:{'--c':colors[(i + r) % colors.length], animationDelay:(i * 0.4) + 's'}, onclick:() => {
+      const bc = colors[(i + r) % colors.length];
+      const b = h('button', {class:'balloon' + (LIGHT_BG.has(bc) ? ' ink' : ''), 'aria-label':'balloon ' + s, style:{'--c':bc, animationDelay:(i * 0.4) + 's'}, onclick:() => {
         if (solved) return;
         if (s === target){
           solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
@@ -1536,7 +1558,8 @@ function actSight(ctx){
     const prompt = () => say(T.popWordShow, [T.popWord, target]);
     let solved = false, misses = 0;
     const bubbles = opts.map((w, k) => {
-      const b = h('button', {class:'balloon bubble-word', style:{'--c':colors[(k + r) % colors.length], animationDelay:(k * 0.35) + 's'},
+      const bc = colors[(k + r) % colors.length];
+      const b = h('button', {class:'balloon bubble-word' + (LIGHT_BG.has(bc) ? ' ink' : ''), style:{'--c':bc, animationDelay:(k * 0.35) + 's'},
         onclick:() => {
           if (solved) return;
           if (w === target){

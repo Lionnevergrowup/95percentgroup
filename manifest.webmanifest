@@ -1,0 +1,16 @@
+{
+  "name": "Phonics Fun",
+  "short_name": "Phonics Fun",
+  "description": "Kindergarten phonics practice: 25 lessons of sounds, tracing, words, sight words, spelling and sentences.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#d6f0ff",
+  "theme_color": "#aee3ff",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
