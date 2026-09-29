@@ -25,10 +25,15 @@ LETTER_PHONEMES = {
     'K': 'keɪ', 'L': 'ɛl', 'M': 'ɛm', 'N': 'ɛn', 'O': 'oʊ', 'P': 'piː', 'Q': 'kjuː', 'R': 'ɑːɹ', 'S': 'ɛs', 'T': 'tiː',
     'U': 'juː', 'V': 'viː', 'W': 'dʌbəljuː', 'X': 'ɛks', 'Y': 'waɪ', 'Z': 'ziː',
 }
-# Phrases spoken from different text.
+# Phrases spoken from different text or phonemes.
 OVERRIDES = {
     'a': 'uh.',  # the sight word "a" is said "uh", not the letter name
 }
+PHONEME_OVERRIDES = {
+    'an': 'ˈæn.',  # stressed, so it is not heard as the letter N
+}
+# Lines that sound better synthesized on their own than cut out of the carrier sentence.
+DIRECT = {'A chick!'}
 # Short lines are cut out of this sentence, so they start cleanly instead of with a stray sound.
 CARRIER = 'The next word is:'
 STRESS = str.maketrans('', '', 'ˈˌ')
@@ -41,6 +46,8 @@ def is_article(text, m):
 
 def phonemes_for(kokoro, phrase):
     """Phonemes for a phrase, with every letter name checked."""
+    if phrase in PHONEME_OVERRIDES:
+        return PHONEME_OVERRIDES[phrase]
     if phrase in OVERRIDES:
         return kokoro.tokenizer.phonemize(OVERRIDES[phrase], 'en-us')
     letters = [m.group(1) for m in re.finditer(r'\b([A-Z])\b', phrase) if not is_article(phrase, m)]
@@ -83,7 +90,8 @@ def synthesize(kokoro, phrase):
     speed = 0.85 if words <= 2 else 0.92  # single words a little slower
     direct, rate = kokoro.create(ph, voice=VOICE, speed=speed, lang='en-us', is_phonemes=True)
     direct = np.asarray(direct, np.float32)
-    if words <= 3 and not re.search(r'[,;:.!?]', phrase[:-1]):
+    # lines ending in ':' lead into another clip; the cut is unreliable for them
+    if words <= 3 and phrase not in DIRECT and not phrase.endswith(':') and not re.search(r'[,;:.!?]', phrase[:-1]):
         carrier = kokoro.tokenizer.phonemize(CARRIER, 'en-us')
         full, rate = kokoro.create(carrier + ' ' + ph, voice=VOICE, speed=speed, lang='en-us', is_phonemes=True)
         cut = cut_after_pause(np.asarray(full, np.float32), rate)
