@@ -338,6 +338,7 @@ table.prog td.l small{color:var(--ink-soft)}
 <body>
 <div id="app"></div>
 <noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
+<script src="audio/manifest.js"></script>
 <script>
 (() => {
 'use strict';
@@ -432,6 +433,43 @@ const STICKERS = [
 const PRAISE = ['Great job!','Awesome!','You did it!','Super!','Yay!','Wonderful!','Nice work!','Fantastic!','Way to go!'];
 const TRY = ['Try again!','Oops! Try again.','Almost! Try again.'];
 
+// Everything Leo says. Fixed lines live in T; lines built from lesson data come from P.
+// tools/build_audio.py records one clip for every phrase that allPhrases() returns.
+const T = {
+  greet:"Hi! I'm Leo. Let's learn to read!", greetShow:"Hi! I'm Leo. Let's learn to read! 📚",
+  pickLesson:'Pick a lesson!', playAgain:'Play again?', hooray:'Hooray!', greatJob:'Great job!', earnedStar:'You earned a star!',
+  finishALesson:'Finish a lesson to get a sticker!', hiGrownUps:'Hi grown-ups!', readingVoice:'This is my reading voice.',
+  tapEachCard:'Tap each card and say the sound! 👆', tapTheCard:'Tap the card and say the sound! 👆', sayWithMe:'Say it with me! 🗣️',
+  popBalloon:'Pop the balloon with the sound you hear! 🎈',
+  traceLetter:'Trace the letter with your finger! ✏️', traceWord:'Trace the word with your finger! ✏️',
+  traceThis:'Trace this letter!', traceTheWord:'Trace the word:',
+  useFinger:'Use your finger to trace the letter! ☝️', stayOn:'Stay on the gray letter! 🙂', keepGoing:'Keep going! Cover all of the gray letter. 🖍️',
+  listenTap:'Listen, then tap the word you hear! 👂', findWord:'Find the word:',
+  soundOut:'Tap a word. Sound it out, then read it! 📖',
+  tapMagic:'Tap the magic e! ✨', thisSays:'This says:', magicE:'Magic e!',
+  sightIntro:'These are sight words. Tap each one! 👆', readWithMe:'Read it with me! 👀', popWordShow:'Pop the word you hear! 🫧', popWord:'Pop the word:',
+  spellShow:'Listen and spell the word! 👂', spellWord:'Spell the word:',
+  readSentence:'Read the sentence with me!', readSentenceShow:'Read the sentence with me! Tap a word for help. 💬',
+  orderShow:'Put the words in order! 🧩', order:'Put the words in order.',
+  drawFirst:'Draw a picture first! 🖍️', tapWordPic:'Now tap a word for your picture! 🏷️',
+  drawIntroShow:'Draw something you can read! Then tap a word. 🎨', drawIntro:'Draw something you can read or spell! Then tap a word for your picture.',
+  yourPicture:'Your picture is:', greatDrawing:'Great drawing!',
+};
+const P = {
+  lesson: n => `Lesson ${n}!`,
+  playLesson: n => `Let's play lesson ${n}!`,
+  finished: n => `You finished lesson ${n}!`,
+  playAct: name => `Let's play ${name}.`,
+  gotSticker: name => `You got a ${name} sticker!`,
+  aSticker: name => `A ${name}!`,
+  finishFor: n => `Finish lesson ${n} to get this sticker!`,
+  haveStickers: c => `You have ${c} sticker${c > 1 ? 's' : ''}!`,
+  popLetter: s => isMagicSound(s) ? `Find ${soundName(s)}. ${s[0].toUpperCase()}, like ${SOUND[s][0]}.` : `Pop the letter ${s.toUpperCase()}! ${s.toUpperCase()}, ${SOUND[s][0]}.`,
+  thatIs: s => `That is ${soundName(s)}.`,
+  find: s => `Find ${soundName(s)}!`,
+  magicMakes: v => `Magic e makes ${v.toUpperCase()} say its name.`,
+};
+
 /* ---------- small helpers ---------- */
 const $ = s => document.querySelector(s);
 function h(tag, attrs, ...kids){
@@ -503,55 +541,136 @@ function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state
 
 /* ---------- speech (Web Speech API) ---------- */
 let audioUnlocked = false;
+// Leo's voice: pre-recorded clips (audio/*.mp3, listed in audio/manifest.js) play through one <audio>
+// element, so they work in WeChat, on phones without an English speech engine, and with the iPhone
+// silent switch on. The browser's own speech (Web Speech API) is only a fallback for a missing clip.
+const EMOJI_RE = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{2190}-\u{21FF}\u{FE0F}\u{200D}]/gu;
+const norm = t => String(t).replace(EMOJI_RE, '').replace(/\s+/g, ' ').trim();
+const CLIPS = window.PHONICS_CLIPS || {};
 const Speech = {
-  ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
-  voice: null, voices: [], gen: 0, current: null,
+  tts: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+  voice: null, gen: 0, current: null, audio: null, halt: null, blobs: new Map(), queue: [], loading: 0,
   init(){
-    if (!this.ok) return;
+    this.audio = new Audio();
+    this.audio.preload = 'auto';
+    this.audio.setAttribute('playsinline', '');
+    if (!this.tts) return;
     const load = () => {
-      this.voices = speechSynthesis.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang));
-      this.voice = this.choose();
+      const vs = speechSynthesis.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang));
+      const score = v => (/en[-_]US/i.test(v.lang) ? 4 : 0) + (/samantha|ava|allison|google us english|jenny|aria|zira/i.test(v.name) ? 3 : 0)
+        - (/albert|bad news|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|ralph|junior/i.test(v.name) ? 10 : 0);
+      this.voice = vs.sort((a, b) => score(b) - score(a))[0] || null;
     };
     load();
     try { speechSynthesis.addEventListener('voiceschanged', load); } catch (e) { speechSynthesis.onvoiceschanged = load; }
   },
-  choose(){
-    const vs = this.voices;
-    if (!vs.length) return null;
-    if (state.settings.voice){ const v = vs.find(v => v.voiceURI === state.settings.voice); if (v) return v; }
-    const score = v => {
-      let s = 0;
-      if (/en[-_]US/i.test(v.lang)) s += 4; else if (/en[-_](GB|AU|CA|IE|NZ)/i.test(v.lang)) s += 2;
-      if (/samantha|ava|allison|susan|karen|moira|serena|google us english|jenny|aria|zira|natural|enhanced|premium/i.test(v.name)) s += 3;
-      if (/albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|organ|superstar|trinoids|whisper|wobble|zarvox|fred|ralph|kathy|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i.test(v.name)) s -= 10;
-      if (v.localService) s += 1;
-      return s;
-    };
-    return [...vs].sort((a, b) => score(b) - score(a))[0];
+  // Must run inside a tap: lets later clips play without a tap (iOS / Chrome autoplay rules).
+  unlock(){
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    const a = this.audio;
+    try { a.src = SILENT_WAV; a.volume = 1; const pr = a.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
   },
-  stop(){ this.gen++; if (this.ok) try { speechSynthesis.cancel(); } catch (e) {} },
-  speak(text, opts = {}){
+  file: phrase => CLIPS[norm(phrase)] || null,
+  url(phrase){ const f = this.file(phrase); return f ? (this.blobs.get(f) || 'audio/' + f) : null; },
+  // Fetch clips in the background so they play instantly later.
+  preload(phrases){
+    for (const ph of phrases){ const f = this.file(ph); if (f && !this.blobs.has(f) && !this.queue.includes(f)) this.queue.push(f); }
+    const pump = () => {
+      while (this.loading < 6 && this.queue.length){
+        const f = this.queue.shift();
+        if (this.blobs.has(f)) continue;
+        this.loading++;
+        fetch('audio/' + f).then(r => r.ok ? r.blob() : Promise.reject(r.status))
+          .then(b => { this.blobs.set(f, URL.createObjectURL(b)); })
+          .catch(() => {})
+          .finally(() => { this.loading--; pump(); });
+      }
+    };
+    pump();
+  },
+  stopNow(){
+    const a = this.audio;
+    if (a){ a.onended = a.onerror = null; try { a.pause(); } catch (e) {} }
+    if (this.tts) try { speechSynthesis.cancel(); } catch (e) {}
+    if (this.halt){ const f = this.halt; this.halt = null; f(); }
+  },
+  stop(){ this.gen++; this.stopNow(); },
+  // parts: a phrase or a list of phrases, spoken one after another
+  speak(parts, opts = {}){
     const gen = ++this.gen;
+    this.stopNow();
+    const list = (Array.isArray(parts) ? parts : [parts]).map(norm).filter(Boolean);
+    if (window.__spoken && list.length && audioUnlocked) window.__spoken.push(list.join(' ')); // test hook
+    return (async () => {
+      for (let i = 0; i < list.length; i++){
+        if (gen !== this.gen || !audioUnlocked) return;
+        if (i) await wait(110);
+        if (gen !== this.gen) return;
+        await this.one(list[i], opts, gen);
+      }
+    })();
+  },
+  async one(phrase, opts, gen){
+    const url = this.url(phrase);
+    if (url && await this.clip(url, opts, gen)) return;
+    if (gen !== this.gen) return;
+    if (!url && window.__clipMiss) window.__clipMiss.push(phrase);
+    await this.say(phrase, opts, gen);
+  },
+  rate: opts => Math.max(0.6, Math.min(1.5, (opts.rate || 1) * state.settings.rate / 0.85)),
+  clip(url, opts, gen){
     return new Promise(resolve => {
-      if (!this.ok || !text || !audioUnlocked){ resolve(); return; }
-      let finished = false, timer = null;
-      const fin = () => { if (finished) return; finished = true; clearTimeout(timer); resolve(); };
+      const a = this.audio;
+      let over = false, timer = null;
+      const end = ok => { if (over) return; over = true; clearTimeout(timer); a.onended = a.onerror = null; if (this.halt === stopFn) this.halt = null; resolve(ok); };
+      const stopFn = () => end(true);
+      if (gen !== this.gen){ resolve(true); return; }
+      this.halt = stopFn;
+      a.onended = () => end(true);
+      a.onerror = () => end(false);
+      try {
+        a.src = url;
+        const r = this.rate(opts);
+        a.defaultPlaybackRate = r; a.playbackRate = r;
+        const pr = a.play();
+        if (pr && pr.catch) pr.catch(() => end(false));
+      } catch (e) { end(false); return; }
+      timer = setTimeout(() => end(true), 15000);
+    });
+  },
+  // fallback: the browser's built-in speech
+  say(text, opts, gen){
+    return new Promise(resolve => {
+      if (!this.tts){ resolve(); return; }
+      let over = false, timer = null;
+      const fin = () => { if (over) return; over = true; clearTimeout(timer); if (this.halt === fin) this.halt = null; resolve(); };
       const start = () => {
         if (gen !== this.gen){ fin(); return; }
-        const u = new SpeechSynthesisUtterance(String(text));
+        const u = new SpeechSynthesisUtterance(text);
         if (this.voice){ u.voice = this.voice; u.lang = this.voice.lang; } else u.lang = 'en-US';
         u.rate = Math.max(0.5, Math.min(1.4, (opts.rate || 1) * state.settings.rate));
-        u.pitch = opts.pitch || 1.08;
+        u.pitch = 1.08;
         u.onend = fin; u.onerror = fin;
         this.current = u; // keep a reference: some browsers drop events for collected utterances
+        this.halt = fin;
         try { speechSynthesis.speak(u); if (speechSynthesis.paused) speechSynthesis.resume(); } catch (e) { fin(); return; }
-        timer = setTimeout(fin, 2500 + String(text).length * 120 / u.rate);
+        timer = setTimeout(fin, 2500 + text.length * 120 / u.rate);
       };
       if (speechSynthesis.speaking || speechSynthesis.pending){ speechSynthesis.cancel(); setTimeout(start, 70); }
       else start();
     });
   },
 };
+// a tiny silent WAV, played inside the first tap to unlock audio
+const SILENT_WAV = (() => {
+  const n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+  const str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true);
+  v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], {type:'audio/wav'}));
+})();
 
 /* ---------- sound effects (Web Audio, no files needed) ---------- */
 const Sfx = {
@@ -628,7 +747,7 @@ function say(text, speech){
   bubbleEl.classList.add('show');
   mascotEl.classList.add('talking');
   clearTimeout(bubbleTimer);
-  return Speech.speak(speech == null ? text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '') : speech)
+  return Speech.speak(speech == null ? text : speech)
     .then(() => {
       if (my !== sayCount) return;
       mascotEl.classList.remove('talking');
@@ -721,7 +840,8 @@ function showHome(){
       h('div', {class:'lesson-grid'}, LESSONS.slice(a - 1, b).map(l => lessonBtn(l, l === next))),
     ])
   );
-  say(next && next.n > 1 ? `Let's play lesson ${next.n}! 👆` : 'Pick a lesson! 👆', next && next.n > 1 ? `Let's play lesson ${next.n}!` : 'Pick a lesson!');
+  const line = next && next.n > 1 ? P.playLesson(next.n) : T.pickLesson;
+  say(line + ' 👆', line);
 }
 
 function lessonBtn(l, isNext){
@@ -754,8 +874,9 @@ function showLesson(l){
         h('span', {class:'nm'}, actName(l, a)));
     }))
   );
-  if (next) say(`Lesson ${l.n}! Tap ${actIcon(l, next)} ${actName(l, next)}.`, `Lesson ${l.n}! Let's play ${actName(l, next)}.`);
-  else say(`You finished lesson ${l.n}! 🎉 Play again?`, `You finished lesson ${l.n}! Play again?`);
+  Speech.preload(lessonPhrases(l));
+  if (next) say(`Lesson ${l.n}! Tap ${actIcon(l, next)} ${actName(l, next)}.`, [P.lesson(l.n), P.playAct(actName(l, next))]);
+  else say(`You finished lesson ${l.n}! 🎉 Play again?`, [P.finished(l.n), T.playAgain]);
 }
 
 function showActivity(l, a){
@@ -768,6 +889,7 @@ function showActivity(l, a){
     progress: f => { bar.style.width = Math.round(Math.max(0, Math.min(1, f)) * 100) + '%'; },
     done: () => { if (id === navId) finishActivity(l, a); },
   };
+  Speech.preload(lessonPhrases(l));
   mount(
     h('header', {class:'topbar act-head'},
       backBtn('#/lesson/' + l.n),
@@ -797,7 +919,7 @@ function finishActivity(l, a){
         h('button', {class:'btn pink', onclick:() => go('#/stickers')}, '🏆 My stickers'),
         h('button', {class:'btn white', onclick:() => go('#/')}, '🏠 Home')),
     ]);
-    say(`Hooray! You finished lesson ${l.n}! 🎉`, `Hooray! You finished lesson ${l.n}! You got a ${name} sticker!`);
+    say(`Hooray! You finished lesson ${l.n}! 🎉`, [T.hooray, P.finished(l.n), P.gotSticker(name)]);
     confetti(80);
     return;
   }
@@ -810,7 +932,7 @@ function finishActivity(l, a){
               : (nextLesson ? h('button', {class:'btn green big', onclick:() => go('#/lesson/' + nextLesson.n)}, `Lesson ${nextLesson.n} ➜`) : null),
       h('button', {class:'btn white', onclick:() => go('#/lesson/' + l.n)}, '📚 Lesson ' + l.n)),
   ]);
-  say(first ? 'You earned a star! ⭐' : 'Great job!', first ? 'Great job! You earned a star!' : 'Great job!');
+  say(first ? T.earnedStar + ' ⭐' : T.greatJob, first ? [T.greatJob, T.earnedStar] : T.greatJob);
 }
 
 function showStickers(){
@@ -822,12 +944,11 @@ function showStickers(){
       const [emo, name] = STICKERS[l.n - 1];
       return h('button', {class:'sticker-slot' + (got ? ' got' : ''), onclick:e => {
           Sfx.tap(); bounce(e.currentTarget);
-          if (got) say(`A ${name}! 🎉`, `A ${name}!`); else say(`Finish lesson ${l.n} to get this sticker!`);
+          if (got) say(P.aSticker(name) + ' 🎉', P.aSticker(name)); else say(P.finishFor(l.n));
         }},
         h('span', {class:'st'}, got ? emo : '❔'), h('span', {class:'lb'}, `Lesson ${l.n}`));
     })));
-  say(count ? `You have ${count} sticker${count > 1 ? 's' : ''}! 🎉` : 'Finish a lesson to get a sticker!',
-      count ? `You have ${count} sticker${count > 1 ? 's' : ''}!` : 'Finish a lesson to get a sticker!');
+  say(count ? P.haveStickers(count) + ' 🎉' : T.finishALesson, count ? P.haveStickers(count) : T.finishALesson);
 }
 
 function showParents(){
@@ -838,9 +959,6 @@ function showParents(){
     }}, label)));
     return wrap;
   };
-  const voiceSel = h('select', {'aria-label':'Voice', onchange:e => { state.settings.voice = e.target.value; saveState(); Speech.voice = Speech.choose(); Speech.speak('Hi! I am Leo. Let us read!'); }},
-    h('option', {value:''}, 'Auto (best English voice)'),
-    Speech.voices.map(v => h('option', {value:v.voiceURI, selected:v.voiceURI === state.settings.voice}, `${v.name} (${v.lang})`)));
   const tick = ok => ok ? '✅' : '⬜';
   mount(
     h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, '👪 Parents · 家长')),
@@ -860,11 +978,12 @@ function showParents(){
     h('section', {class:'panel-card'},
       h('h2', {}, 'Settings · 设置'),
       h('div', {class:'setting'}, h('label', {}, 'Voice speed · 语速'),
-        seg([['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak('This is my reading voice.'); })),
+        seg([['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak(T.readingVoice); })),
       h('div', {class:'setting'}, h('label', {}, 'Sound effects · 音效'),
         seg([['🔔 On', true], ['🔕 Off', false]], state.settings.sfx, v => { state.settings.sfx = v; saveState(); Sfx.good(); })),
-      h('div', {class:'setting'}, h('label', {}, 'Voice · 声音'),
-        Speech.ok && Speech.voices.length ? voiceSel : h('span', {}, Speech.ok ? 'Default voice' : 'Speech is not supported in this browser · 此浏览器不支持语音'))),
+      h('div', {class:'setting'}, h('label', {}, 'Sound test · 声音测试'),
+        h('button', {class:'btn blue', onclick:() => { Sfx.good(); Speech.speak(T.readingVoice); }}, '🔊 Test · 试听')),
+      h('p', {class:'zh'}, '听不到声音？① 把音量调大；② 在微信里打开的，请点右上角「…」→「在浏览器打开」；③ 蓝牙耳机/音箱连着的话，声音会从那里出来。')),
     h('section', {class:'panel-card'},
       h('h2', {}, 'Parent/teacher check · 学习记录'),
       h('div', {class:'table-wrap'}, h('table', {class:'prog'},
@@ -881,7 +1000,7 @@ function showParents(){
     h('section', {class:'panel-card'},
       h('p', {class:'zh'}, 'Based on the “Kindergarten Phonics Practice — 25-Lesson Home Practice Book” (original supplemental practice aligned to the Grade K lesson progression). It does not reproduce the commercial Student Workbook.'))
   );
-  say('Hi grown-ups! 👋', 'Hi grown-ups!');
+  say(T.hiGrownUps + ' 👋', T.hiGrownUps);
 }
 
 /* =====================================================================
@@ -899,7 +1018,7 @@ function actSounds(ctx){
     const [kw, pic] = SOUND[s];
     const card = h('button', {class:'sound-card', 'aria-label':soundName(s), onclick:() => {
         Sfx.tap(); bounce(card); card.classList.add('seen'); seen.add(s);
-        say('Say it with me! 🗣️', soundSay(s));
+        say(T.sayWithMe, soundSay(s));
         if (seen.size === targets.length) reveal(playBtn);
       }},
       h('span', {class:'glyph'}, soundGlyph(s)), h('span', {class:'pic'}, pic), h('span', {class:'kw'}, kw));
@@ -907,7 +1026,7 @@ function actSounds(ctx){
   });
   ctx.stage.replaceChildren(h('div', {class:'cards' + (targets.length > 4 ? ' many' : '')}, cards), playBtn);
   ctx.progress(0);
-  const intro = () => say(targets.length > 1 ? 'Tap each card and say the sound! 👆' : 'Tap the card and say the sound! 👆');
+  const intro = () => say(targets.length > 1 ? T.tapEachCard : T.tapTheCard);
   ctx.replay = intro; intro();
 
   function round(r){
@@ -919,8 +1038,7 @@ function actSounds(ctx){
       : uniq([...shuffle(targets), ...shuffle(ALPHA)]).filter(x => x !== target);
     const opts = shuffle([target, ...pool.slice(0, 3)]);
     const colors = ['var(--pink)','var(--blue)','var(--orange)','var(--green)','var(--purple)','var(--teal)'];
-    const prompt = () => say('Pop the balloon with the sound you hear! 🎈',
-      isMagicSound(target) ? `Find ${soundName(target)}. ${target[0].toUpperCase()}, like ${SOUND[target][0]}.` : `Pop the letter ${target.toUpperCase()}! ${target.toUpperCase()}, ${SOUND[target][0]}.`);
+    const prompt = () => say(T.popBalloon, P.popLetter(target));
     let solved = false, misses = 0;
     const balloons = opts.map((s, i) => {
       const b = h('button', {class:'balloon', 'aria-label':'balloon ' + s, style:{'--c':colors[(i + r) % colors.length], animationDelay:(i * 0.4) + 's'}, onclick:() => {
@@ -928,11 +1046,11 @@ function actSounds(ctx){
         if (s === target){
           solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
           ctx.progress((r + 2) / total);
-          say(pick(PRAISE), `${pick(PRAISE)} ${soundName(target)}!`);
+          const pr = pick(PRAISE); say(pr, [pr, soundName(target)]);
           later(() => round(r + 1), 1500);
         } else {
           misses++; Sfx.bad(); wiggle(b);
-          say(pick(TRY), `That is ${soundName(s)}. Find ${soundName(target)}!`);
+          say(pick(TRY), [P.thatIs(s), P.find(target)]);
           if (misses >= 2) balloons[opts.indexOf(target)].classList.add('hint');
         }
       }}, s);
@@ -1036,15 +1154,15 @@ function actTrace(ctx){
     if (pass || (pressed && fails >= 4 && inkN > 0)){ success(); return; }
     if (!pressed) return;
     fails++; Sfx.bad(); wiggle(wrap);
-    if (inkN === 0) say('Use your finger to trace the letter! ☝️');
-    else if (outside > 0.4) say('Stay on the gray letter! 🙂');
-    else say('Keep going! Cover all of the gray letter. 🖍️');
+    if (inkN === 0) say(T.useFinger);
+    else if (outside > 0.4) say(T.stayOn);
+    else say(T.keepGoing);
   }
   function success(){
     won = true; Sfx.good(); wrap.classList.add('win'); burst(wrap); drawGuide(true);
     const text = items[i];
     ctx.progress((i + 1) / items.length);
-    say(pick(PRAISE), `${pick(PRAISE)} ${text.length === 1 ? soundName(text) : text}!`);
+    const pr = pick(PRAISE); say(pr, [pr, text.length === 1 ? soundName(text) : text]);
     later(() => { i++; if (i >= items.length){ ctx.done(); } else startItem(); }, 1600);
   }
   function startItem(){
@@ -1055,8 +1173,7 @@ function actTrace(ctx){
     topLabel.textContent = isLetter ? `${text}  ·  ${SOUND[text][0]}` : text;
     clearInk(); if (W) drawGuide();
     ctx.progress(i / items.length);
-    const prompt = () => say(isLetter ? 'Trace the letter with your finger! ✏️' : 'Trace the word with your finger! ✏️',
-      isLetter ? `Trace the letter ${soundName(text)}. ${soundName(text)} is for ${SOUND[text][0]}.` : `Trace the word, ${text}.`);
+    const prompt = () => say(isLetter ? T.traceLetter : T.traceWord, isLetter ? [T.traceThis, soundSay(text)] : [T.traceTheWord, text]);
     ctx.replay = prompt; prompt();
   }
 
@@ -1125,7 +1242,7 @@ function wordQuiz(ctx, targets, doneSteps, total, onDone){
     const target = targets[r];
     const opts = shuffle([target, ...distractorWords(l, target, 2)]);
     const pic = h('div', {class:'quiz-pic'}, PIC[target] || '⭐');
-    const prompt = () => say('Listen, then tap the word you hear! 👂', `Find the word: ${target}.`);
+    const prompt = () => say(T.listenTap, [T.findWord, target]);
     let solved = false, misses = 0;
     const btns = opts.map(w => {
       const b = h('button', {class:'choice', onclick:() => {
@@ -1133,11 +1250,11 @@ function wordQuiz(ctx, targets, doneSteps, total, onDone){
         if (w === target){
           solved = true; b.classList.add('right'); Sfx.good(); burst(b); pic.classList.add('show');
           ctx.progress((doneSteps + r + 1) / total);
-          say(pick(PRAISE), `${pick(PRAISE)} ${target}!`);
+          const pr = pick(PRAISE); say(pr, [pr, target]);
           later(() => round(r + 1), 1600);
         } else {
           misses++; Sfx.bad(); wiggle(b);
-          say(pick(TRY), `That says ${w}. Find ${target}.`);
+          say(pick(TRY), [w, T.findWord, target]);
           if (misses >= 2) btns[opts.indexOf(target)].classList.add('hint');
         }
       }}, wordEl(w));
@@ -1172,7 +1289,7 @@ function actRead(ctx){
   });
   ctx.stage.replaceChildren(h('div', {class:'cards'}, cards), playBtn);
   ctx.progress(0);
-  const intro = () => say('Tap a word. Sound it out, then read it! 📖');
+  const intro = () => say(T.soundOut);
   ctx.replay = intro; intro();
 }
 
@@ -1193,8 +1310,8 @@ function actMagic(ctx){
       const pic = h('div', {class:'magic-pic'}, PIC[short] || '');
       let magicDone = false;
       const hear = () => magicDone
-        ? say(`${short} ➜ ${long}`, `${short}. ${long}!`)
-        : say('Tap the magic e! ✨', `This says ${short}. Tap the magic e!`);
+        ? say(`${short} ➜ ${long}`, [short, long])
+        : say(T.tapMagic, [T.thisSays, short, T.tapMagic]);
       const wand = h('button', {class:'btn pink big wand', onclick:() => {
         if (magicDone) return;
         magicDone = true; Sfx.pop(); Sfx.good(); burst(wand); wand.hidden = true;
@@ -1202,7 +1319,7 @@ function actMagic(ctx){
         wordBox.replaceChildren(we); bounce(we);
         pic.textContent = PIC[long] || '✨';
         reveal(nextBtn);
-        say(`${short} ➜ ${long}`, `${short}... ${long}! Magic e makes ${long[firstVowel(long)].toUpperCase()} say its name.`);
+        say(`${short} ➜ ${long}`, [short, long, P.magicMakes(long[firstVowel(long)])]);
       }}, '🪄 magic e');
       const again = h('button', {class:'btn white', onclick:() => { Sfx.tap(); hear(); }}, '🔊');
       ctx.stage.replaceChildren(h('div', {class:'magic-box'}, pic, wordBox, h('div', {class:'row'}, again, wand)), nextBtn);
@@ -1210,7 +1327,7 @@ function actMagic(ctx){
     } else {
       const w = singles[i - pairs.length];
       const we = wordEl(w, true);
-      const hear = () => say(`${w} ✨`, `${w}. Magic e!`);
+      const hear = () => say(`${w} ✨`, [w, T.magicE]);
       ctx.stage.replaceChildren(h('div', {class:'magic-box'}, h('div', {class:'magic-pic'}, PIC[w] || '✨'), h('div', {class:'magic-word'}, we),
         h('button', {class:'btn white', onclick:() => { Sfx.tap(); bounce(we); hear(); }}, '🔊')), nextBtn);
       nextBtn.hidden = false;
@@ -1231,14 +1348,14 @@ function actSight(ctx){
   const cards = words.map(w => {
     const card = h('button', {class:'word-card', onclick:() => {
       Sfx.tap(); bounce(card); card.classList.add('seen'); seen.add(w);
-      say('Read it with me! 👀', w);
+      say(T.readWithMe, w);
       if (seen.size === words.length) reveal(playBtn);
     }}, wordEl(w, false));
     return card;
   });
   ctx.stage.replaceChildren(h('div', {class:'cards'}, cards), playBtn);
   ctx.progress(0);
-  const intro = () => say('These are sight words. Tap each one! 👆');
+  const intro = () => say(T.sightIntro);
   ctx.replay = intro; intro();
 
   function round(r){
@@ -1248,7 +1365,7 @@ function actSight(ctx){
     const others = uniq([...shuffle(words), ...shuffle(pool)]).filter(w => w !== target).slice(0, 3);
     const opts = shuffle([target, ...others]);
     const colors = ['var(--teal)','var(--pink)','var(--purple)','var(--blue)'];
-    const prompt = () => say('Pop the word you hear! 🫧', `Pop the word: ${target}.`);
+    const prompt = () => say(T.popWordShow, [T.popWord, target]);
     let solved = false, misses = 0;
     const bubbles = opts.map((w, k) => {
       const b = h('button', {class:'balloon bubble-word', style:{'--c':colors[(k + r) % colors.length], animationDelay:(k * 0.35) + 's'},
@@ -1257,11 +1374,11 @@ function actSight(ctx){
           if (w === target){
             solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
             ctx.progress((r + 2) / total);
-            say(pick(PRAISE), `${pick(PRAISE)} ${target}!`);
+            const pr = pick(PRAISE); say(pr, [pr, target]);
             later(() => round(r + 1), 1500);
           } else {
             misses++; Sfx.bad(); wiggle(b);
-            say(pick(TRY), `That says ${w}. Find ${target}.`);
+            say(pick(TRY), [w, T.popWord, target]);
             if (misses >= 2) bubbles[opts.indexOf(target)].classList.add('hint');
           }
         }}, w);
@@ -1294,7 +1411,7 @@ function actSpell(ctx){
     let pos = 0, misses = 0, solved = false;
     const slots = chars.map(() => h('div', {class:'slot'}));
     const pic = h('div', {class:'spell-pic'}, PIC[word] || '👂');
-    const prompt = () => say('Listen and spell the word! 👂', `Spell the word: ${word}.`);
+    const prompt = () => say(T.spellShow, [T.spellWord, word]);
     const tiles = shuffle([...chars, ...spellExtras(l, word, word.length > 1 ? 2 : 3)]).map(ch => {
       const t = h('button', {class:'tile', onclick:() => {
         if (solved || t.classList.contains('used')) return;
@@ -1305,7 +1422,7 @@ function actSpell(ctx){
           if (pos === chars.length){
             solved = true; Sfx.good(); burst(slotRow);
             ctx.progress((r + 1) / list.length);
-            say(pick(PRAISE), `${pick(PRAISE)} ${chars.join(', ')}. ${word}!`);
+            const pr = pick(PRAISE); say(pr, [pr, ...chars.map(soundName), word]);
             later(() => round(r + 1), 2600);
           }
         } else {
@@ -1356,7 +1473,7 @@ function actSentence(ctx){
         h('button', {class:'btn green big', onclick:() => { readTok++; Sfx.good(); buildPhase(k); }}, '✅ I read it!')));
     ctx.replay = readAlong;
     const tok0 = readTok;
-    say('Read the sentence with me! Tap a word for help. 💬', 'Read the sentence with me!').then(() => { if (ctx.alive() && readTok === tok0) readAlong(); });
+    say(T.readSentenceShow, T.readSentence).then(() => { if (ctx.alive() && readTok === tok0) readAlong(); });
   };
   const buildPhase = k => {
     ctx.progress((k * 2 + 1) / total);
@@ -1366,7 +1483,7 @@ function actSentence(ctx){
     for (let tries = 0; tries < 5 && tokens.length > 1 && order.every((v, idx) => v === idx); tries++) order = shuffle(order);
     let pos = 0, misses = 0, solved = false;
     const slots = tokens.map(t => h('span', {class:'wslot', style:{minWidth:(t.length * 0.62 + 0.6) + 'em'}}));
-    const prompt = () => say('Put the words in order! 🧩', `Put the words in order. ${text}`);
+    const prompt = () => say(T.orderShow, [T.order, text]);
     const chips = order.map(idx => {
       const t = tokens[idx];
       const c = h('button', {class:'wchip', onclick:() => {
@@ -1377,7 +1494,8 @@ function actSentence(ctx){
           if (pos === tokens.length){
             solved = true; Sfx.good(); confetti(25);
             ctx.progress((k * 2 + 2) / total);
-            say(pick(PRAISE), `${pick(PRAISE)} ${text}`).then(() => later(() => { if (k + 1 < sents.length) readPhase(k + 1); else ctx.done(); }, 500));
+            const pr = pick(PRAISE);
+            say(pr, [pr, text]).then(() => later(() => { if (k + 1 < sents.length) readPhase(k + 1); else ctx.done(); }, 500));
           } else Speech.speak(cleanWord(t));
         } else {
           misses++; Sfx.bad(); wiggle(c);
@@ -1420,9 +1538,9 @@ function actDraw(ctx){
   }}, w)));
   const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
   const doneBtn = h('button', {class:'btn green big', onclick:() => {
-    if (!hasInk){ Sfx.bad(); wiggle(wrap); say('Draw a picture first! 🖍️'); return; }
-    if (!label){ Sfx.bad(); replayAnim(bank, 'nudge'); say('Now tap a word for your picture! 🏷️'); return; }
-    say('My picture: ' + label + '! 🎨', `Your picture is: ${label}! Great drawing!`).then(() => later(ctx.done, 200));
+    if (!hasInk){ Sfx.bad(); wiggle(wrap); say(T.drawFirst); return; }
+    if (!label){ Sfx.bad(); replayAnim(bank, 'nudge'); say(T.tapWordPic); return; }
+    say('My picture: ' + label + '! 🎨', [T.yourPicture, label, T.greatDrawing]).then(() => later(ctx.done, 200));
   }}, '✅ Done');
   wrap.append(labelEl);
   ctx.stage.classList.add('compact');
@@ -1430,7 +1548,7 @@ function actDraw(ctx){
     h('div', {class:'draw-tools'}, swatches, sizes, eraser, undoBtn, clearBtn, saveBtn),
     wrap, h('div', {class:'row'}, bank, doneBtn));
   ctx.progress(0);
-  const intro = () => say(`Draw something you can read! Then tap a word. 🎨`, 'Draw something you can read or spell! Then tap a word for your picture.');
+  const intro = () => say(T.drawIntroShow, T.drawIntro);
   ctx.replay = intro; intro();
 
   let c2d = null, W = 0, H = 0, dpr = 1;
@@ -1490,6 +1608,31 @@ function actDraw(ctx){
 }
 
 /* =====================================================================
+   PHRASES — every line Leo can say (tools/build_audio.py records these)
+   ===================================================================== */
+const SOUND_KEYS = Object.keys(SOUND);
+function globalPhrases(){
+  return uniq([
+    ...Object.values(T), ...PRAISE, ...TRY,
+    ...SOUND_KEYS.flatMap(x => [soundName(x), P.thatIs(x), P.find(x)]),
+    ...ALPHA.map(c => c.toUpperCase()),
+    ...uniq(LESSONS.flatMap(l => ACTS.map(a => P.playAct(actName(l, a))))),
+  ].map(norm).filter(Boolean));
+}
+function lessonPhrases(l){
+  const name = STICKERS[l.n - 1][1];
+  return uniq([
+    P.lesson(l.n), P.playLesson(l.n), P.finished(l.n), P.gotSticker(name), P.aSticker(name), P.finishFor(l.n), P.haveStickers(l.n),
+    ...l.sounds.flatMap(x => [soundSay(x), P.popLetter(x)]),
+    ...allWords(l), ...hfWords(l),
+    ...(l.pairs || []).map(p => P.magicMakes(p[1][firstVowel(p[1])])),
+    ...l.sentences.flatMap(([text]) => [text, ...text.split(' ').map(cleanWord)]),
+  ].map(norm).filter(Boolean));
+}
+const allPhrases = () => uniq([...globalPhrases(), ...LESSONS.flatMap(lessonPhrases)]);
+window.__phonicsPhrases = allPhrases;
+
+/* =====================================================================
    START
    ===================================================================== */
 Speech.init();
@@ -1500,11 +1643,13 @@ overlay([
   h('div', {class:'hero-lion'}, '🦁'),
   h('h1', {}, 'Phonics Fun!'),
   h('p', {}, 'Kindergarten phonics · 25 lessons'),
+  h('p', {style:{fontSize:'1.05rem', margin:'-8px 0 16px'}}, '🔊 Turn the sound on · 请打开声音'),
   h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
-    audioUnlocked = true; Sfx.ensure(); Sfx.win();
+    audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win();
     closeOverlay();
-    const greet = location.hash.length > 2 ? null : "Hi! I'm Leo. Let's learn to read!";
-    if (greet) say("Hi! I'm Leo. Let's learn to read! 📚", greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
+    Speech.preload(globalPhrases());
+    const greet = location.hash.length > 2 ? null : T.greet;
+    if (greet) say(T.greetShow, greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
     else route();
   }}, '▶ Play')),
 ], 'splash');
