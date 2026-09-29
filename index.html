@@ -688,7 +688,8 @@ const Speech = {
         const r = this.rate(opts);
         a.defaultPlaybackRate = r; a.playbackRate = r;
         const pr = a.play();
-        if (pr && pr.catch) pr.catch(() => end(false));
+        // iOS can refuse audio again after a call or time in the background; the next tap unlocks it
+        if (pr && pr.catch) pr.catch(err => { if (err && err.name === 'NotAllowedError') this.blocked = true; end(false); });
       } catch (e) { end(false); return; }
       timer = setTimeout(() => end(true), 15000);
     });
@@ -1736,6 +1737,8 @@ window.__phonicsPhrases = allPhrases;
    START
    ===================================================================== */
 Speech.init();
+document.addEventListener('pointerdown', () => { if (Speech.blocked && audioUnlocked){ Speech.blocked = false; Speech.unlock(); Sfx.ensure(); } }, true);
+document.addEventListener('touchend', () => { if (Speech.blocked && audioUnlocked){ Speech.blocked = false; Speech.unlock(); Sfx.ensure(); } }, true);
 if (/[?&]v=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
 window.addEventListener('hashchange', route);
 document.addEventListener('visibilitychange', () => { if (document.hidden) Speech.stop(); });
