@@ -22,7 +22,7 @@ Each lesson has 7 short activities that follow the workbook page:
 - A friendly lion (Leo) speaks every instruction out loud, so children don't need to read directions yet. Tap Leo to hear it again.
 - Leo's voice is pre-recorded (`audio/`, 600+ short MP3 clips), so it works in any browser: in-app browsers such as WeChat, Android phones without an English speech engine, and iPhones with the silent switch on.
 - Children earn a ⭐ for each activity and an animal sticker 🏆 for each finished lesson.
-- **Parents page (👪)**: the Quick Parent Guide, voice speed, sound effects on/off, a sound test with tips if nothing plays, a "Refresh to latest version" button, and a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons.
+- **Parents page (👪)**: the Quick Parent Guide, voice speed, sound effects on/off, a sound test with tips if nothing plays, a "Refresh to latest version" button, a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons that ticks itself as the child plays and can be ticked by hand, and a "Reset progress" button (with a grown-up check).
 - Progress is saved in this browser on this device (localStorage). Nothing is sent anywhere.
 
 ## Tips

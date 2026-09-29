@@ -232,8 +232,11 @@ button{font-family:inherit;color:inherit}
 
 /* drawing */
 .draw-tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
-.swatch{width:44px;height:44px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 0 var(--line);cursor:pointer;padding:0}
-.swatch.on{outline:4px solid var(--ink);outline-offset:1px}
+.swatch{width:46px;height:46px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 0 var(--line),inset 0 0 0 1px rgba(0,0,0,.18);cursor:pointer;padding:0;
+  display:grid;place-items:center;color:#fff;font-size:1.3rem;font-weight:700;transition:transform .12s}
+.swatch.light{color:var(--ink)}
+.swatch.on{outline:4px solid var(--ink);outline-offset:2px;transform:scale(1.12)}
+.swatch.on::after{content:'✓'}
 .tool{width:48px;height:48px;border-radius:14px;border:0;background:#fff;box-shadow:0 4px 0 var(--line);font-size:1.4rem;cursor:pointer;display:grid;place-items:center;padding:0}
 .tool.on{background:#e9e4ff;outline:3px solid var(--purple)}
 .tool .dot{display:block;border-radius:50%;background:var(--ink)}
@@ -268,6 +271,15 @@ button{font-family:inherit;color:inherit}
 .setting{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:10px 0}
 .setting>label{font-weight:600;min-width:150px}
 .setting select{font-size:1rem;padding:.4em;border-radius:10px;border:2px solid var(--line);max-width:100%}
+.check-btn{border:0;background:none;font-size:1.5rem;line-height:1;padding:6px 10px;border-radius:10px;cursor:pointer;min-width:48px;min-height:44px}
+.check-btn:hover,.check-btn:focus-visible{background:#f1eefc}
+.check-btn.hand{box-shadow:inset 0 0 0 2px #d8d0ff}
+input,textarea{-webkit-user-select:text;user-select:text}
+.gate{display:flex;flex-direction:column;align-items:center;gap:10px;margin:6px 0 14px}
+.gate label{font-weight:600;font-size:1.15rem}
+.gate input{font:inherit;font-size:1.8rem;font-weight:700;width:5em;text-align:center;padding:.2em;border:3px solid var(--line);border-radius:14px;color:var(--ink)}
+.gate input:focus{outline:none;border-color:var(--purple)}
+.gate .err{color:var(--red-d);font-weight:600;min-height:1.3em}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.prog{border-collapse:collapse;width:100%;min-width:560px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
 table.prog th,table.prog td{padding:7px 8px;border-bottom:1px solid #eee9fb;text-align:center;font-size:.98rem}
@@ -329,6 +341,12 @@ table.prog td.l small{color:var(--ink-soft)}
   .brand .logo{display:none}
   .brand{font-size:1.35rem}
   .brand .name{overflow:hidden;text-overflow:ellipsis}
+  .panel-card{padding:14px 12px}
+  table.prog{min-width:0}
+  table.prog th,table.prog td{padding:5px 3px;font-size:.8rem}
+  table.prog th{font-size:.72rem}
+  table.prog td.l{font-size:.85rem;overflow-wrap:anywhere}
+  .check-btn{min-width:40px;padding:6px 4px;font-size:1.35rem}
   .pill{font-size:1.05rem;padding:.3em .6em}
 }
 /* phones held sideways and other short screens */
@@ -472,6 +490,12 @@ const PIC = {
   pet:'🐕', Pete:'🧑', them:'👥', here:'📍', cube:'🧊', tub:'🛁', tube:'🧪', cut:'✂️', cute:'🥰',
 };
 
+// Drawing colours: clearly different from each other; the name is read out when a colour is picked.
+const DRAW_COLORS = [
+  ['black', '#212121'], ['red', '#e53935'], ['orange', '#fb8c00'], ['yellow', '#fdd835', true], ['green', '#43a047'],
+  ['blue', '#1e88e5'], ['purple', '#8e24aa'], ['pink', '#f48fb1', true], ['brown', '#795548'],
+];
+
 const STICKERS = [
   ['🐶','puppy'],['🐱','kitty'],['🐰','bunny'],['🦊','fox'],['🐻','bear'],['🐼','panda'],['🐨','koala'],['🐯','tiger'],
   ['🦁','lion'],['🐮','cow'],['🐷','pig'],['🐸','frog'],['🐵','monkey'],['🐧','penguin'],['🐤','chick'],['🦉','owl'],
@@ -587,6 +611,7 @@ const state = (() => {
   try { s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
   if (!s || typeof s !== 'object') s = {};
   if (!s.done || typeof s.done !== 'object') s.done = {};
+  if (!s.check || typeof s.check !== 'object') s.check = {};   // ticks a parent set by hand: {lesson: {Sounds: true, ...}}
   s.settings = Object.assign({rate:0.85, sfx:true, voice:''}, s.settings || {});
   return s;
 })();
@@ -1065,7 +1090,22 @@ function showParents(){
     }}, label)));
     return wrap;
   };
-  const tick = ok => ok ? '✅' : '⬜';
+  // A box is ticked automatically when the child finishes the activities; a tap sets it by hand.
+  const checkBtn = (l, name, keys) => {
+    const auto = keys.every(k => isDone(l.n, k));
+    const mine = state.check[l.n] || {};
+    const hand = Object.prototype.hasOwnProperty.call(mine, name);
+    const on = hand ? !!mine[name] : auto;
+    const b = h('button', {class:'check-btn' + (hand ? ' hand' : ''), 'aria-pressed':String(on), 'aria-label':`Lesson ${l.n} ${name}: ${on ? 'checked' : 'not checked'}`,
+      title: hand ? 'Set by you. Tap to change.' : (auto ? 'Done in the game. Tap to change.' : 'Tap to tick'),
+      onclick:() => {
+        Sfx.tap();
+        (state.check[l.n] = state.check[l.n] || {})[name] = !on;
+        saveState();
+        b.replaceWith(checkBtn(l, name, keys));
+      }}, on ? '✅' : '⬜');
+    return b;
+  };
   mount(
     h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, '👪 For Parents')),
     h('section', {class:'panel-card'},
@@ -1097,17 +1137,46 @@ function showParents(){
         h('thead', {}, h('tr', {}, h('th', {}, 'Lesson'), PARENT_CHECK.map(([name]) => h('th', {}, name)))),
         h('tbody', {}, LESSONS.map(l => h('tr', {},
           h('td', {class:'l'}, h('b', {}, `${l.n}. ${l.focus}`), h('br'), h('small', {}, 'HF: ' + hfWords(l).join(', '))),
-          PARENT_CHECK.map(([, keys]) => h('td', {}, tick(keys.every(k => isDone(l.n, k)))))))))),
+          PARENT_CHECK.map(([name, keys]) => h('td', {}, checkBtn(l, name, keys)))))))),
+      h('p', {class:'note'}, 'Boxes tick themselves as your child finishes the activities. Tap any box to tick or untick it yourself.'),
       h('div', {class:'row', style:{marginTop:'14px', justifyContent:'flex-start'}},
-        h('button', {class:'btn red', onclick:() => {
-          const a = 2 + Math.floor(Math.random() * 7), b = 2 + Math.floor(Math.random() * 7);
-          const ans = window.prompt(`Reset all progress? Parents only: what is ${a} + ${b}?`);
-          if (ans != null && +ans === a + b){ state.done = {}; saveState(); route(); }
-        }}, '🗑️ Reset progress'))),
+        h('button', {class:'btn red', onclick:() => { Sfx.tap(); confirmReset(); }}, '🗑️ Reset progress'))),
     h('section', {class:'panel-card'},
       h('p', {class:'note'}, 'Based on the “Kindergarten Phonics Practice — 25-Lesson Home Practice Book” (original supplemental practice aligned to the Grade K lesson progression). It does not reproduce the commercial Student Workbook.'))
   );
   say(T.hiGrownUps + ' 👋', T.hiGrownUps);
+}
+
+// Reset all progress, after a simple sum only a grown-up can answer.
+function confirmReset(){
+  const a = 3 + Math.floor(Math.random() * 7), b = 3 + Math.floor(Math.random() * 7);
+  const input = h('input', {type:'text', inputmode:'numeric', pattern:'[0-9]*', autocomplete:'off', 'aria-label':`What is ${a} plus ${b}?`});
+  const err = h('div', {class:'err', role:'alert'});
+  const doReset = () => {
+    if (input.value.trim() !== String(a + b)){
+      Sfx.bad(); err.textContent = input.value.trim() ? 'Not quite. Try again.' : 'Type the answer first.';
+      wiggle(input); input.select(); return;
+    }
+    state.done = {}; state.check = {}; saveState();
+    route();   // redraw the parents page with everything cleared
+    overlay([
+      h('div', {class:'big-star'}, '🧹'),
+      h('h1', {}, 'Progress cleared'),
+      h('p', {}, 'All stars, stickers and ticks on this device were removed.'),
+      h('div', {class:'row'}, h('button', {class:'btn green', onclick:closeOverlay}, 'OK')),
+    ]);
+  };
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doReset(); if (e.key === 'Escape') closeOverlay(); });
+  overlay([
+    h('div', {class:'big-star'}, '🗑️'),
+    h('h1', {}, 'Reset all progress?'),
+    h('p', {}, 'This removes every star, sticker and tick on this device. It cannot be undone.'),
+    h('div', {class:'gate'}, h('label', {}, `Grown-ups only: what is ${a} + ${b}?`), input, err),
+    h('div', {class:'row'},
+      h('button', {class:'btn red', onclick:doReset}, '🗑️ Reset'),
+      h('button', {class:'btn white', onclick:() => { Sfx.tap(); closeOverlay(); }}, 'Cancel')),
+  ]);
+  setTimeout(() => { try { input.focus(); } catch (e) {} }, 50);
 }
 
 /* =====================================================================
@@ -1610,29 +1679,34 @@ function actSentence(ctx){
 // 7 · Draw and label
 function actDraw(ctx){
   const l = ctx.lesson, words = allWords(l);
-  const colors = ['#2b2250','#ff5a5f','#ff9f1c','#ffd23f','#22c07a','#3d8bfd','#7c5cff','#ff5fa2','#8b5a2b'];
+  const colors = DRAW_COLORS.map(c => c[1]);
   let color = colors[1], size = 12, erasing = false, label = '', hasInk = false, drawing = false, last = null;
   const history = [];
   const wrap = h('div', {class:'draw-wrap'});
   const cv = h('canvas', {'aria-label':'Drawing area'});
   wrap.append(cv);
   const labelEl = h('div', {class:'draw-label'}, '');
-  const swatches = colors.map(c => h('button', {class:'swatch' + (c === color ? ' on' : ''), style:{background:c}, 'aria-label':'color', onclick:e => {
-    Sfx.tap(); color = c; erasing = false; eraser.classList.remove('on');
-    swatches.forEach(s => s.classList.remove('on')); e.currentTarget.classList.add('on');
-  }}));
-  const sizes = [[6, 8], [12, 14], [24, 22]].map(([s, dot]) => h('button', {class:'tool' + (s === size ? ' on' : ''), 'aria-label':'brush size', onclick:e => {
-    Sfx.tap(); size = s; sizes.forEach(x => x.classList.remove('on')); e.currentTarget.classList.add('on');
-  }}, h('span', {class:'dot', style:{width:dot + 'px', height:dot + 'px'}})));
-  const eraser = h('button', {class:'tool', 'aria-label':'eraser', onclick:() => { Sfx.tap(); erasing = !erasing; eraser.classList.toggle('on', erasing); }}, '🧽');
-  const undoBtn = h('button', {class:'tool', 'aria-label':'undo', onclick:() => { Sfx.tap(); const snap = history.pop(); if (snap) c2d.putImageData(snap, 0, 0); }}, '↩️');
-  const clearBtn = h('button', {class:'tool', 'aria-label':'clear', onclick:() => { Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; }}, '🗑️');
+  const pick1 = (list, el) => list.forEach(x => { x.classList.toggle('on', x === el); x.setAttribute('aria-pressed', String(x === el)); });
+  const swatches = DRAW_COLORS.map(([name, c, light]) => h('button', {class:'swatch' + (light ? ' light' : '') + (c === color ? ' on' : ''), style:{background:c},
+    'aria-label':name, title:name, 'aria-pressed':String(c === color), onclick:e => {
+      Sfx.tap(); color = c; erasing = false; eraser.classList.remove('on'); eraser.setAttribute('aria-pressed', 'false');
+      pick1(swatches, e.currentTarget);
+      Speech.speak(name);
+    }}));
+  const sizes = [['small brush', 6, 8], ['medium brush', 12, 14], ['large brush', 24, 22]].map(([name, s, dot]) => h('button', {class:'tool' + (s === size ? ' on' : ''),
+    'aria-label':name, title:name, 'aria-pressed':String(s === size), onclick:e => {
+      Sfx.tap(); size = s; pick1(sizes, e.currentTarget);
+    }}, h('span', {class:'dot', style:{width:dot + 'px', height:dot + 'px'}})));
+  const eraser = h('button', {class:'tool', 'aria-label':'eraser', title:'eraser', 'aria-pressed':'false', onclick:() => {
+    Sfx.tap(); erasing = !erasing; eraser.classList.toggle('on', erasing); eraser.setAttribute('aria-pressed', String(erasing)); }}, '🧽');
+  const undoBtn = h('button', {class:'tool', 'aria-label':'undo', title:'undo', onclick:() => { Sfx.tap(); const snap = history.pop(); if (snap) c2d.putImageData(snap, 0, 0); }}, '↩️');
+  const clearBtn = h('button', {class:'tool', 'aria-label':'clear picture', title:'clear picture', onclick:() => { Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; }}, '🗑️');
   const bank = h('div', {class:'word-bank'}, words.map(w => h('button', {class:'wchip', onclick:e => {
     Sfx.tap(); label = w; labelEl.textContent = (PIC[w] ? PIC[w] + ' ' : '') + w;
     [...bank.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on');
     Speech.speak(w);
   }}, w)));
-  const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
+  const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', title:'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
   const doneBtn = h('button', {class:'btn green big', onclick:() => {
     if (!hasInk){ Sfx.bad(); wiggle(wrap); say(T.drawFirst); return; }
     if (!label){ Sfx.bad(); replayAnim(bank, 'nudge'); say(T.tapWordPic); return; }
@@ -1715,6 +1789,7 @@ function globalPhrases(){
     ...Object.values(T), ...PRAISE, ...TRY,
     ...SOUND_KEYS.flatMap(x => [soundName(x), P.thatIs(x), P.find(x)]),
     ...ALPHA.map(c => c.toUpperCase()),
+    ...DRAW_COLORS.map(c => c[0]),
     ...uniq(LESSONS.flatMap(l => ACTS.map(a => P.playAct(actName(l, a))))),
   ].map(norm).filter(Boolean));
 }
