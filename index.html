@@ -1,0 +1,1514 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#aee3ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Phonics Fun</title>
+<meta name="description" content="Kindergarten phonics practice game: 25 lessons of letter sounds, tracing, word reading, sight words, spelling, sentences and drawing.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%81%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="fonts/andika-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Self-hosted fonts (SIL Open Font License, see fonts/OFL-*.txt).
+   Andika is designed for beginning readers: single-story a and g, clear letter shapes. */
+@font-face{font-family:'Andika';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/andika-400-latin.woff2) format('woff2')}
+@font-face{font-family:'Andika';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/andika-700-latin.woff2) format('woff2')}
+@font-face{font-family:'Fredoka';font-style:normal;font-weight:300 700;font-display:swap;src:url(fonts/fredoka-latin.woff2) format('woff2')}
+:root{
+  --ink:#2b2250; --ink-soft:#5f5886; --line:#d9d3f3;
+  --bg1:#aee3ff; --bg2:#fff4d6;
+  --purple:#7c5cff; --purple-d:#5a3fd6;
+  --pink:#ff5fa2;   --pink-d:#d63f80;
+  --orange:#ff9f1c; --orange-d:#d27a00;
+  --yellow:#ffd23f; --yellow-d:#dcae00;
+  --green:#22c07a;  --green-d:#15965c;
+  --blue:#3d8bfd;   --blue-d:#1f66d1;
+  --teal:#18b8c9;   --teal-d:#0e8f9c;
+  --red:#ff5a5f;    --red-d:#d33a40;
+  --gold:#f5b700;   --gold-d:#c28f00;
+  --font-ui:'Fredoka','Nunito','Trebuchet MS',system-ui,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji';
+  --font-read:'Andika','Comic Sans MS','Chalkboard SE',system-ui,sans-serif,'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji';
+  --font-emoji:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji','Twemoji Mozilla',sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:var(--font-ui);color:var(--ink);
+  background-color:#d6f0ff;
+  background-image:
+    radial-gradient(ellipse 160px 60px at 12% 9%,rgba(255,255,255,.85) 60%,transparent 61%),
+    radial-gradient(ellipse 110px 44px at 18% 6%,rgba(255,255,255,.85) 60%,transparent 61%),
+    radial-gradient(ellipse 190px 64px at 86% 16%,rgba(255,255,255,.75) 60%,transparent 61%),
+    radial-gradient(ellipse 120px 46px at 80% 12%,rgba(255,255,255,.75) 60%,transparent 61%),
+    linear-gradient(180deg,var(--bg1) 0%,#d8f1ff 50%,var(--bg2) 100%);
+  background-attachment:fixed;
+  -webkit-user-select:none;user-select:none;touch-action:manipulation;overflow-x:hidden;
+}
+button{font-family:inherit;color:inherit}
+[hidden]{display:none!important}
+.sound-card .pic,.word-card .wpic,.quiz-pic,.spell-pic,.sent-pic,.magic-pic,.trace-top .tp,.big-star,.hero-lion,
+.mascot .lion,.act-card .ic,.brand .logo,.lesson-btn .sticker,.sticker-slot .st,.icon-btn,.listen,.spark{font-family:var(--font-emoji)}
+#app{
+  min-height:100vh;display:flex;flex-direction:column;max-width:1100px;margin:0 auto;
+  padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(118px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+}
+
+/* ---------- buttons ---------- */
+.btn{
+  --c:var(--purple);--d:var(--purple-d);
+  font-weight:600;font-size:clamp(1.1rem,3.4vw,1.35rem);border:0;border-radius:20px;padding:.55em 1.1em;min-height:58px;
+  color:#fff;background:var(--c);box-shadow:0 6px 0 var(--d);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:.4em;
+  transition:transform .08s,box-shadow .08s;text-shadow:0 1px 0 rgba(0,0,0,.15)
+}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--d)}
+.btn.green{--c:var(--green);--d:var(--green-d)} .btn.blue{--c:var(--blue);--d:var(--blue-d)}
+.btn.orange{--c:var(--orange);--d:var(--orange-d)} .btn.pink{--c:var(--pink);--d:var(--pink-d)}
+.btn.teal{--c:var(--teal);--d:var(--teal-d)} .btn.red{--c:var(--red);--d:var(--red-d)}
+.btn.white{--c:#fff;--d:var(--line);color:var(--ink);text-shadow:none}
+.btn.big{font-size:clamp(1.3rem,4.2vw,1.7rem);min-height:68px;padding:.5em 1.4em}
+.icon-btn{
+  flex:none;width:56px;height:56px;border-radius:50%;border:0;background:#fff;box-shadow:0 5px 0 var(--line);
+  font-size:1.6rem;cursor:pointer;display:grid;place-items:center;transition:transform .08s,box-shadow .08s;padding:0
+}
+.icon-btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:center}
+
+/* ---------- top bar ---------- */
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.brand{flex:1;display:flex;align-items:center;gap:8px;font-size:clamp(1.5rem,5vw,2.3rem);font-weight:700;min-width:0}
+.brand .logo{font-size:1.25em;animation:bob 3s ease-in-out infinite}
+.brand .name{background:linear-gradient(90deg,var(--purple),var(--pink),var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+.title{flex:1;font-size:clamp(1.3rem,4.5vw,2rem);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{flex:none;background:#fff;border-radius:999px;padding:.3em .8em;font-weight:700;font-size:1.25rem;box-shadow:0 4px 0 var(--line);white-space:nowrap}
+
+/* ---------- home ---------- */
+.section-title{font-size:clamp(1.05rem,3vw,1.3rem);font-weight:700;margin:20px 4px 10px;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+.lesson-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:16px 14px}
+.lesson-btn{
+  --c:var(--purple);--d:var(--purple-d);
+  position:relative;aspect-ratio:1/1;border-radius:30px;border:0;background:var(--c);box-shadow:0 7px 0 var(--d);color:#fff;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;transition:transform .08s,box-shadow .08s
+}
+.lesson-btn:active{transform:translateY(4px);box-shadow:0 3px 0 var(--d)}
+.lesson-btn .num{font-size:clamp(2rem,6vw,2.6rem);font-weight:700;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.15)}
+.lesson-btn .letters{font-family:var(--font-read);font-weight:700;font-size:1.1rem;background:rgba(255,255,255,.28);border-radius:999px;padding:0 .55em;margin-top:5px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.lesson-btn .letters.small{font-size:.9rem}
+.dots{display:flex;gap:3px;margin-top:7px}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.35)}
+.dots i.on{background:#fff}
+.lesson-btn .sticker{position:absolute;top:-12px;right:-8px;font-size:2.1rem;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));animation:bob 2.6s ease-in-out infinite}
+.lesson-btn.next{animation:pulse 1.6s ease-in-out infinite}
+.lesson-btn.next::after{content:'▶';position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);background:var(--yellow);color:var(--ink);font-size:.8rem;border-radius:999px;padding:2px 8px;box-shadow:0 3px 0 var(--yellow-d)}
+
+/* ---------- lesson ---------- */
+.lesson-hero{background:#fff;border-radius:30px;box-shadow:0 7px 0 var(--line);padding:16px;margin-bottom:22px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.hero-sounds{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.hero-chip{font-family:var(--font-read);font-weight:700;font-size:clamp(2rem,7vw,2.8rem);line-height:1;min-width:68px;padding:.2em .4em;border:0;border-radius:18px;background:var(--yellow);box-shadow:0 5px 0 var(--yellow-d);cursor:pointer}
+.hero-focus{font-size:1.15rem;color:var(--ink-soft);font-weight:600}
+.hero-hf{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.hf-label{font-weight:600;color:var(--ink-soft)}
+.hf-chip{font-family:var(--font-read);font-weight:700;font-size:1.25rem;border:0;border-radius:14px;padding:.15em .6em;background:#ffe3f0;box-shadow:0 4px 0 #f7b8d3;cursor:pointer}
+.act-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 16px}
+.act-card{
+  --c:var(--purple);
+  position:relative;border:0;border-radius:28px;background:#fff;box-shadow:0 7px 0 var(--line);padding:18px 10px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .08s,box-shadow .08s
+}
+.act-card:active{transform:translateY(4px);box-shadow:0 3px 0 var(--line)}
+.act-card .ic{font-size:2.8rem;width:86px;height:86px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:inset 0 -6px 0 rgba(0,0,0,.14)}
+.act-card .nm{font-size:1.25rem;font-weight:700}
+.act-card .step{position:absolute;top:10px;left:12px;width:30px;height:30px;border-radius:50%;background:#f1eefc;color:var(--ink-soft);font-weight:700;display:grid;place-items:center}
+.act-card .check{position:absolute;top:6px;right:10px;font-size:1.7rem}
+.act-card.done{background:#effff6;box-shadow:0 7px 0 #aee8cb}
+.act-card.next{animation:pulse 1.6s ease-in-out infinite}
+
+/* ---------- activity ---------- */
+.act-title{font-size:clamp(1.1rem,3.6vw,1.6rem);font-weight:700;white-space:nowrap}
+.progress{flex:1;min-width:60px;height:22px;background:#fff;border-radius:999px;box-shadow:inset 0 2px 5px rgba(0,0,0,.12);overflow:hidden}
+.progress>i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--yellow),var(--orange));transition:width .45s}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:10px 0 4px;min-height:58vh}
+.listen{width:88px;height:88px;border-radius:50%;border:0;background:var(--blue);box-shadow:0 7px 0 var(--blue-d);font-size:2.6rem;cursor:pointer;animation:pulse 2s ease-in-out infinite;flex:none}
+.listen:active{transform:translateY(4px);box-shadow:0 3px 0 var(--blue-d)}
+.cards{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
+
+.sound-card{
+  width:clamp(124px,24vw,180px);aspect-ratio:3/4;border-radius:28px;background:#fff;border:0;box-shadow:0 8px 0 var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-family:var(--font-read)
+}
+.sound-card .glyph{font-size:clamp(3.2rem,10vw,5rem);font-weight:700;line-height:1.05}
+.sound-card .pic{font-size:clamp(2.2rem,7vw,3.2rem);line-height:1.2}
+.sound-card .kw{font-size:1.2rem;font-weight:700;color:var(--ink-soft)}
+.cards.many{gap:12px}
+.cards.many .sound-card{width:clamp(96px,21vw,150px);aspect-ratio:4/5}
+.cards.many .sound-card .glyph{font-size:clamp(2.4rem,8vw,4rem)}
+.cards.many .sound-card .pic{font-size:clamp(1.6rem,5.5vw,2.6rem)}
+.cards.many .sound-card .kw{font-size:1rem}
+.seen{background:#f1fff7!important;box-shadow:0 8px 0 #a3e6c4!important}
+
+.balloons{display:flex;flex-wrap:wrap;gap:clamp(10px,3vw,30px);justify-content:center;padding:10px 0 40px}
+.balloon{
+  --c:var(--pink);position:relative;width:clamp(92px,19vw,138px);height:clamp(112px,23vw,168px);border:0;cursor:pointer;
+  border-radius:50% 50% 47% 47%/56% 56% 44% 44%;color:#fff;font-family:var(--font-read);font-weight:700;font-size:clamp(2.4rem,8vw,3.8rem);
+  background:radial-gradient(circle at 30% 26%,rgba(255,255,255,.75) 0 7%,transparent 8%),var(--c);
+  box-shadow:inset -8px -12px 0 rgba(0,0,0,.13);text-shadow:0 3px 0 rgba(0,0,0,.18);animation:float 3.2s ease-in-out infinite
+}
+.balloon::before{content:'';position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);border:8px solid transparent;border-bottom:10px solid var(--c);border-top:0}
+.balloon::after{content:'';position:absolute;left:50%;top:100%;margin-top:1px;width:2px;height:40px;background:#8f88b8}
+.balloon.pop{animation:pop .35s ease-out forwards}
+.balloon.bubble-word{
+  border-radius:50%;width:clamp(118px,25vw,168px);height:clamp(118px,25vw,168px);font-size:clamp(1.6rem,5.6vw,2.5rem);
+  background:radial-gradient(circle at 30% 27%,rgba(255,255,255,.9) 0 8%,transparent 9%),radial-gradient(circle,transparent 58%,rgba(255,255,255,.5) 70%,transparent 72%),var(--c);
+  box-shadow:inset -6px -10px 0 rgba(0,0,0,.1),0 0 0 5px rgba(255,255,255,.55)
+}
+.balloon.bubble-word::before,.balloon.bubble-word::after{display:none}
+
+.choices{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
+.choice{
+  font-family:var(--font-read);font-size:clamp(2rem,7.5vw,3.4rem);font-weight:700;min-width:clamp(118px,25vw,200px);padding:.25em .6em;
+  border:0;border-radius:24px;background:#fff;box-shadow:0 7px 0 var(--line);cursor:pointer
+}
+.choice.right{background:#d9ffe9;box-shadow:0 7px 0 #7fdcaa}
+.quiz-pic{font-size:clamp(3.5rem,12vw,5.5rem);height:1.2em;line-height:1.2;opacity:0;transform:scale(.4);transition:.3s cubic-bezier(.2,1.6,.4,1)}
+.quiz-pic.show{opacity:1;transform:none}
+
+.word{font-family:var(--font-read);font-weight:700;font-size:clamp(2.4rem,9vw,4.2rem);line-height:1.1;display:inline-flex;letter-spacing:.02em}
+.word .lt{display:inline-block;transition:transform .15s,color .15s;border-radius:10px;padding:0 .02em}
+.word .lt.lit{color:var(--pink);transform:translateY(-8px) scale(1.15)}
+.word.whole .lt{color:var(--purple)}
+.word .lt.long{color:var(--pink);position:relative}
+.word .lt.long::before{content:'';position:absolute;left:12%;right:12%;top:.08em;height:.08em;border-radius:9px;background:var(--pink)}
+.word .lt.silent{color:#b8b1d8}
+.word-card{
+  border:0;border-radius:28px;background:#fff;box-shadow:0 8px 0 var(--line);padding:14px 22px 10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;min-width:clamp(130px,26vw,190px)
+}
+.word-card .arrow{font-size:1.4rem;color:var(--orange);font-weight:700}
+.word-card .wpic{font-size:2.2rem;min-height:1.2em;line-height:1.2}
+
+/* magic e */
+.magic-box{display:flex;flex-direction:column;align-items:center;gap:16px;background:#fff;border-radius:30px;box-shadow:0 8px 0 var(--line);padding:22px 26px;min-width:min(100%,360px)}
+.magic-word{display:flex;align-items:center;gap:6px}
+.magic-word .word{font-size:clamp(3.2rem,13vw,5.5rem)}
+.eslot{font-family:var(--font-read);font-weight:700;font-size:clamp(3.2rem,13vw,5.5rem);line-height:1.1;width:.9em;text-align:center;border:4px dashed #c9c0f0;border-radius:16px;color:transparent}
+.wand{font-family:var(--font-read);font-size:clamp(1.6rem,5vw,2.2rem)}
+.magic-pic{font-size:clamp(3rem,10vw,4.5rem);min-height:1.2em;line-height:1.2}
+
+/* spelling */
+.spell-pic{font-size:clamp(3.5rem,12vw,5rem);line-height:1.1;min-height:1.1em}
+.slots{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.slot{
+  width:clamp(58px,14vw,88px);height:clamp(70px,17vw,104px);border-radius:18px;border:4px dashed #bdb3ea;background:rgba(255,255,255,.65);
+  font-family:var(--font-read);font-size:clamp(2.3rem,8.5vw,3.8rem);font-weight:700;display:grid;place-items:center
+}
+.slot.filled{border-style:solid;border-color:var(--green);background:#fff;animation:pop-in .25s}
+.tiles{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-width:640px}
+.tile{
+  width:clamp(58px,14vw,88px);height:clamp(64px,15.5vw,94px);border-radius:18px;border:0;background:var(--yellow);box-shadow:0 7px 0 var(--yellow-d);
+  font-family:var(--font-read);font-size:clamp(2.2rem,8vw,3.5rem);font-weight:700;cursor:pointer
+}
+.tile:active{transform:translateY(4px);box-shadow:0 3px 0 var(--yellow-d)}
+.tile.used{visibility:hidden}
+
+/* sentence */
+.sent-pic{font-size:clamp(3.5rem,12vw,5rem);line-height:1.1}
+.sent-pic.small{font-size:clamp(2.6rem,9vw,3.6rem)}
+.sentence{display:flex;flex-wrap:wrap;gap:12px 12px;justify-content:center;font-family:var(--font-read);font-size:clamp(1.9rem,6.5vw,3.2rem);font-weight:700;max-width:900px}
+.wchip{background:#fff;border:0;border-radius:16px;padding:.08em .35em;box-shadow:0 5px 0 var(--line);font:inherit;cursor:pointer;transition:transform .12s,background .12s}
+.wchip.hl{background:var(--yellow);box-shadow:0 5px 0 var(--yellow-d);transform:translateY(-5px)}
+.wchip.used{visibility:hidden}
+.wslot{display:inline-block;min-height:1.35em;border:4px dashed #bdb3ea;border-radius:16px;background:rgba(255,255,255,.55);padding:0 .25em;text-align:center}
+.wslot.filled{border-style:solid;border-color:var(--green);background:#fff;animation:pop-in .25s}
+
+/* tracing */
+.trace-top{display:flex;align-items:center;gap:12px;font-family:var(--font-read);font-weight:700;font-size:clamp(1.3rem,4vw,1.8rem)}
+.trace-top .tp{font-size:clamp(2.2rem,7vw,3rem)}
+.trace-wrap{position:relative;width:min(100%,760px);height:clamp(230px,50vh,520px);background:#fff;border-radius:30px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
+.trace-wrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.trace-wrap.win{box-shadow:0 8px 0 #7fdcaa,0 0 0 6px #b8f5d4}
+
+/* drawing */
+.draw-tools{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center}
+.swatch{width:44px;height:44px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 0 var(--line);cursor:pointer;padding:0}
+.swatch.on{outline:4px solid var(--ink);outline-offset:1px}
+.tool{width:48px;height:48px;border-radius:14px;border:0;background:#fff;box-shadow:0 4px 0 var(--line);font-size:1.4rem;cursor:pointer;display:grid;place-items:center;padding:0}
+.tool.on{background:#e9e4ff;outline:3px solid var(--purple)}
+.tool .dot{display:block;border-radius:50%;background:var(--ink)}
+.stage.compact{gap:14px;justify-content:flex-start}
+.draw-wrap{position:relative;width:min(100%,820px);height:clamp(210px,44vh,470px);background:#fff;border-radius:26px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
+.draw-wrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.draw-label{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;
+  font-family:var(--font-read);font-weight:700;font-size:clamp(1.5rem,4.6vw,2.2rem);color:var(--purple);background:rgba(255,255,255,.85);border-radius:14px;padding:0 .4em}
+.draw-label:empty{display:none}
+.word-bank{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.word-bank .wchip{font-family:var(--font-read);font-size:clamp(1.3rem,4vw,1.8rem);font-weight:700}
+.word-bank .wchip.on{background:#e9e4ff;box-shadow:0 5px 0 var(--purple)}
+.word-bank.nudge{animation:shake .5s 2}
+
+/* stickers */
+.sticker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:16px}
+.sticker-slot{border:0;border-radius:26px;background:rgba(255,255,255,.6);box-shadow:0 6px 0 var(--line);padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.sticker-slot .st{font-size:3.4rem;line-height:1.1;filter:grayscale(1) opacity(.35)}
+.sticker-slot.got{background:#fff}
+.sticker-slot.got .st{filter:none}
+.sticker-slot .lb{font-weight:600;color:var(--ink-soft)}
+
+/* parents */
+.panel-card{background:#fff;border-radius:24px;box-shadow:0 6px 0 var(--line);padding:18px 20px;margin-bottom:18px;-webkit-user-select:text;user-select:text}
+.panel-card h2{margin:0 0 10px;font-size:1.35rem}
+.panel-card p,.panel-card li{font-size:1.05rem;line-height:1.55;font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
+.panel-card .zh{color:var(--ink-soft)}
+.panel-card ul{padding-left:1.2em;margin:6px 0}
+.seg{display:inline-flex;flex-wrap:wrap;gap:8px}
+.seg button{border:0;border-radius:14px;padding:.45em .9em;font-size:1.05rem;font-weight:600;background:#f1eefc;cursor:pointer;min-height:44px}
+.seg button.on{background:var(--purple);color:#fff}
+.setting{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:10px 0}
+.setting>label{font-weight:600;min-width:150px}
+.setting select{font-size:1rem;padding:.4em;border-radius:10px;border:2px solid var(--line);max-width:100%}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.prog{border-collapse:collapse;width:100%;min-width:560px;font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif}
+table.prog th,table.prog td{padding:7px 8px;border-bottom:1px solid #eee9fb;text-align:center;font-size:.98rem}
+table.prog th{background:#f6f4ff;position:sticky;top:0}
+table.prog td.l{text-align:left}
+table.prog td.l small{color:var(--ink-soft)}
+
+/* mascot */
+.mascot{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;z-index:30;pointer-events:none;max-width:calc(100% - 20px)}
+.mascot .lion{font-size:clamp(52px,12vw,70px);line-height:1;pointer-events:auto;cursor:pointer;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 4px 3px rgba(0,0,0,.18));background:none;border:0;padding:0}
+.mascot.talking .lion{animation:talk .28s ease-in-out infinite alternate}
+.mascot .bubble{
+  position:relative;background:#fff;border-radius:22px;padding:10px 16px;margin-bottom:24px;max-width:min(560px,calc(100vw - 110px));
+  font-size:clamp(1rem,3.2vw,1.3rem);font-weight:600;box-shadow:0 4px 0 var(--line);opacity:0;transform:translateY(8px) scale(.96);transition:.25s
+}
+.mascot .bubble.show{opacity:1;transform:none}
+.mascot .bubble::before{content:'';position:absolute;left:-10px;bottom:12px;border:10px solid transparent;border-right-color:#fff;border-left:0}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:rgba(43,34,80,.45);display:grid;place-items:center;z-index:50;padding:16px;animation:fade .2s}
+.overlay .panel{background:#fff;border-radius:34px;padding:26px 22px 24px;text-align:center;max-width:520px;width:100%;box-shadow:0 12px 0 rgba(0,0,0,.14);animation:pop-in .4s cubic-bezier(.2,1.6,.4,1)}
+.overlay h1{margin:6px 0 4px;font-size:clamp(1.9rem,6vw,2.6rem)}
+.overlay p{margin:0 0 18px;font-size:1.25rem;color:var(--ink-soft);font-weight:600}
+.overlay .row{flex-direction:column}
+.overlay .row .btn{width:100%}
+.big-star{font-size:clamp(5rem,20vw,7rem);line-height:1;display:inline-block;animation:spin-in .9s cubic-bezier(.2,1.4,.4,1)}
+.splash{background:linear-gradient(180deg,#aee3ff,#fff4d6)}
+.splash .panel{background:transparent;box-shadow:none}
+.splash .hero-lion{font-size:clamp(7rem,30vw,11rem);line-height:1;display:inline-block;animation:bob 2.4s ease-in-out infinite}
+.splash h1{font-size:clamp(2.6rem,11vw,4.2rem);margin:6px 0;background:linear-gradient(90deg,var(--purple),var(--pink),var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* effects */
+.confetti{position:fixed;top:-24px;width:12px;height:18px;border-radius:3px;z-index:60;pointer-events:none;animation:fall linear forwards}
+.spark{position:fixed;z-index:70;pointer-events:none;font-size:1.7rem;transform:translate(-50%,-50%);animation:spark .85s ease-out forwards}
+.shake{animation:shake .45s!important}
+.bounce{animation:bounce .45s}
+.hint{animation:glow .9s ease-in-out infinite!important}
+
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes talk{from{transform:rotate(-5deg) scale(1)}to{transform:rotate(5deg) scale(1.06)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+@keyframes pop{40%{transform:scale(1.3)}100%{transform:scale(0);opacity:0}}
+@keyframes pop-in{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-12px) rotate(-3deg)}40%{transform:translateX(10px) rotate(3deg)}60%{transform:translateX(-7px)}80%{transform:translateX(5px)}}
+@keyframes bounce{0%,100%{transform:scale(1)}40%{transform:scale(1.12) translateY(-6px)}70%{transform:scale(.96)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(255,210,63,.95),0 7px 0 var(--yellow-d);transform:scale(1)}50%{box-shadow:0 0 0 12px rgba(255,210,63,0),0 7px 0 var(--yellow-d);transform:scale(1.08)}}
+@keyframes spin-in{from{transform:rotate(-200deg) scale(0)}to{transform:none}}
+@keyframes fall{to{transform:translate(var(--dx),110vh) rotate(var(--rot))}}
+@keyframes spark{to{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(.4);opacity:0}}
+
+@media (max-width:560px){
+  .act-head .act-title .nm{display:none}
+  .act-grid{grid-template-columns:repeat(2,1fr);gap:16px 12px}
+  .lesson-grid{grid-template-columns:repeat(3,1fr);gap:16px 12px}
+  .icon-btn{width:50px;height:50px;font-size:1.4rem}
+  .topbar{gap:8px}
+  .brand .logo{display:none}
+  .brand{font-size:1.5rem}
+  .pill{font-size:1.1rem;padding:.3em .65em}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   CONTENT — follows the 25-lesson Kindergarten Phonics Practice book.
+   sounds: focus sounds · hf: high-frequency words ('review' = earlier ones)
+   words: "Read the words" · pairs: silent-e short → long word pairs
+   sentences: [sentence, picture] for "Read a sentence"
+   ===================================================================== */
+const LESSONS = [
+  {n:1,  focus:'Routines + letters I, A', label:'i a', sounds:['i','a'], hf:['I','a','the'], words:['I','a'],
+   sentences:[['I am a kid.','🧒'],['I see a cat.','🐱']]},
+  {n:2,  focus:'Letters T, P', label:'t p', sounds:['t','p'], hf:['to','play','see','for'], words:['tap','pat','top'],
+   sentences:[['I tap the top.','👆'],['I see Pat tap.','👀']]},
+  {n:3,  focus:'Letter N + short a', label:'n a', sounds:['n','a'], hf:['like','have','you'], words:['an','at','am','nap','pan','Nan'],
+   sentences:[['I like to nap.','😴'],['You have a pan.','🍳']]},
+  {n:4,  focus:'Review T, P, N, A', label:'Review', review:true, sounds:['t','p','n','a'], hf:['who','what','where'], words:['tap','pan','nap','ant'],
+   sentences:[['Where is the ant?','🐜'],['What is in the pan?','🍳']]},
+  {n:5,  focus:'Letters M, D, G', label:'m d g', sounds:['m','d','g'], hf:['go','so','look','want'], words:['mad','map','dog','dig'],
+   sentences:[['Look at the dog.','🐶'],['I want to dig.','⛏️']]},
+  {n:6,  focus:'Letter S + short i', label:'s i', sounds:['s','i'], hf:['come','said','saw'], words:['sit','sip','Sam','sad'],
+   sentences:[['Sam is sad.','😢'],['I saw Sam sit.','🪑']]},
+  {n:7,  focus:'Letters H, B', label:'h b', sounds:['h','b'], hf:['be','he','she','me','we'], words:['hat','bat','big','ham'],
+   sentences:[['He has a hat.','🎩'],['She has a big bat.','🦇']]},
+  {n:8,  focus:'Review M, D, G, I, S, H, B', label:'Review', review:true, sounds:['m','d','g','i','s','h','b'], hf:['black','blue','brown','yellow'], words:['big','sit','mad','dog','ham'],
+   sentences:[['The big dog is brown.','🐕'],['Sam has a yellow hat.','👒']]},
+  {n:9,  focus:'Letters L, R + short o', label:'l r o', sounds:['l','r','o'], hf:['are','little','with'], words:['log','lot','rod','rob'],
+   sentences:[['The dog sat on a log.','🪵'],['Rob is with a little dog.','🐶']]},
+  {n:10, focus:'Letters C, F', label:'c f', sounds:['c','f'], hf:['find','no','they','help'], words:['cat','fan','fit','cot'],
+   sentences:[['The cat is on the cot.','🐱'],['Help me find the fan.','🔍']]},
+  {n:11, focus:'Letters J, W', label:'j w', sounds:['j','w'], hf:['jump','was','will','went'], words:['jam','wet','win','jog'],
+   sentences:[['We will jog.','🏃'],['The cat was wet.','💦']]},
+  {n:12, focus:'Review O, L, R, C, F, J, W', label:'Review', review:true, sounds:['o','l','r','c','f','j','w'], hf:['one','two','three','four'], words:['log','lot','red','fox','jog'],
+   sentences:[['I see one red fox.','🦊'],['Two dogs can jog.','🐕']]},
+  {n:13, focus:'Letters Z, K + short e', label:'z k e', sounds:['z','k','e'], hf:['that','this','there'], words:['bed','jet','red','keg'],
+   sentences:[['That is a red jet.','✈️'],['There is a dog on the bed.','🛏️']]},
+  {n:14, focus:'Letters Y, V', label:'y v', sounds:['y','v'], hf:['do','my','too','am'], words:['yes','van','yam','vet'],
+   sentences:[['My van is red.','🚐'],['Yes, I am a vet.','🩺']]},
+  {n:15, focus:'Letters Q, X + short u', label:'q x u', sounds:['q','x','u'], hf:['down','must','can','at'], words:['quit','fix','sun','cub'],
+   sentences:[['I can fix it.','🔧'],['The cub sat in the sun.','☀️']]},
+  {n:16, focus:'Review E, Z, K, Y, V, U, Q, X', label:'Review', review:true, sounds:['e','z','k','y','v','u','q','x'], hf:'review', words:['bed','zip','van','quit','fox'],
+   sentences:[['The fox is in the van.','🦊'],['Zip up the bag.','🎒']]},
+  {n:17, focus:'Short-vowel review 1', label:'a e i o u', review:true, sounds:['a','e','i','o','u'], hf:['now','well','new','not'], words:['fed','bed','big','hot','sun'],
+   sentences:[['I fed the big dog.','🐶'],['The sun is hot now.','🔥']]},
+  {n:18, focus:'Short-vowel review 2', label:'a e i o u', review:true, sounds:['a','e','i','o','u'], hf:['all','good','say'], words:['jet','set','fix','lot','cub'],
+   sentences:[['The cub is good.','🐻'],['We all say yes.','👍']]},
+  {n:19, focus:'Short-vowel review 3', label:'a e i o u', review:true, sounds:['a','e','i','o','u'], hf:'review', words:['map','red','sit','hot','sun'],
+   sentences:[['Sit in the hot sun.','☀️'],['I see a red map.','🗺️']]},
+  {n:20, focus:'Long a with silent e', label:'a_e', sounds:['a_e'], hf:['our','out'], pairs:[['cap','cape'],['tap','tape'],['mad','made']],
+   sentences:[['I made a cake.','🎂'],['Our cape is red.','🦸']]},
+  {n:21, focus:'Long i with silent e', label:'i_e', sounds:['i_e'], hf:['eat','soon','please','ride','white'], pairs:[['kit','kite'],['pin','pine'],['rid','ride']],
+   sentences:[['I see a white kite.','🪁'],['Please ride with me.','🚲']]},
+  {n:22, focus:'Long o with silent e', label:'o_e', sounds:['o_e'], hf:['under','into'], pairs:[['hop','hope'],['rob','robe'],['not','note']],
+   sentences:[['I hope you like the note.','📝'],['The robe is under the bed.','🛏️']]},
+  {n:23, focus:'Long e with silent e', label:'e_e', sounds:['e_e'], hf:'review', pairs:[['pet','Pete'],['them','theme']], words:['here'],
+   sentences:[['Pete is here.','🧑'],['Pete has a red hat.','🎩']]},
+  {n:24, focus:'Long u with silent e', label:'u_e', sounds:['u_e'], hf:['pretty','funny','away','came'], pairs:[['cub','cube'],['tub','tube'],['cut','cute']],
+   sentences:[['The cub is cute.','🐻'],['I have a funny cube.','🧊']]},
+  {n:25, focus:'Final review', label:'Review', review:true, sounds:['a_e','i_e','o_e','u_e'], hf:'review', pairs:[['cap','cape'],['kit','kite'],['hop','hope'],['cub','cube']],
+   sentences:[['I made a white kite.','🪁'],['I hope you like my cape.','🦸']]},
+];
+const LESSON_BY_N = Object.fromEntries(LESSONS.map(l => [l.n, l]));
+
+// keyword + picture for every sound card
+const SOUND = {
+  a:['apple','🍎'], b:['bear','🐻'], c:['cat','🐱'], d:['dog','🐶'], e:['egg','🥚'], f:['fish','🐟'], g:['goat','🐐'],
+  h:['horse','🐴'], i:['inchworm','🐛'], j:['juice','🧃'], k:['key','🔑'], l:['lion','🦁'], m:['monkey','🐵'], n:['nose','👃'],
+  o:['octopus','🐙'], p:['pig','🐷'], q:['queen','👸'], r:['rabbit','🐰'], s:['sun','☀️'], t:['tiger','🐯'], u:['umbrella','☂️'],
+  v:['violin','🎻'], w:['watermelon','🍉'], x:['box','📦'], y:['yo-yo','🪀'], z:['zebra','🦓'],
+  a_e:['cake','🎂'], i_e:['kite','🪁'], o_e:['bone','🦴'], e_e:['Pete','🧑'], u_e:['cube','🧊'],
+};
+const MAGIC_SOUNDS = ['a_e','i_e','o_e','e_e','u_e'];
+
+// pictures for words (only where a picture is clear)
+const PIC = {
+  I:'🙋', nap:'😴', pan:'🍳', Nan:'👵', ant:'🐜', mad:'😠', map:'🗺️', dog:'🐶', dig:'⛏️', sit:'🪑', sip:'🥤', Sam:'👦',
+  sad:'😢', hat:'🎩', bat:'🦇', big:'🐘', ham:'🍖', log:'🪵', rod:'🎣', rob:'🦹', cat:'🐱', fit:'💪', cot:'🛏️', jam:'🍓',
+  wet:'💦', win:'🏆', jog:'🏃', red:'🔴', fox:'🦊', bed:'🛏️', jet:'✈️', keg:'🛢️', yes:'👍', van:'🚐', yam:'🍠', vet:'🩺',
+  quit:'🛑', fix:'🔧', sun:'☀️', cub:'🐻', zip:'🤐', fed:'🍼', hot:'🔥', tap:'👆', pat:'🤚', cap:'🧢', cape:'🦸', tape:'📼',
+  made:'🛠️', kit:'🧰', kite:'🪁', pin:'📌', pine:'🌲', ride:'🚲', hop:'🐸', hope:'🌈', robe:'🥋', not:'🚫', note:'📝',
+  pet:'🐕', Pete:'🧑', them:'👥', here:'📍', cube:'🧊', tub:'🛁', tube:'🧪', cut:'✂️', cute:'🥰',
+};
+
+const STICKERS = [
+  ['🐶','puppy'],['🐱','kitty'],['🐰','bunny'],['🦊','fox'],['🐻','bear'],['🐼','panda'],['🐨','koala'],['🐯','tiger'],
+  ['🦁','lion'],['🐮','cow'],['🐷','pig'],['🐸','frog'],['🐵','monkey'],['🐧','penguin'],['🐤','chick'],['🦉','owl'],
+  ['🐢','turtle'],['🐙','octopus'],['🦄','unicorn'],['🐝','bee'],['🐞','ladybug'],['🦋','butterfly'],['🐬','dolphin'],
+  ['🦒','giraffe'],['🦖','dinosaur'],
+];
+
+const PRAISE = ['Great job!','Awesome!','You did it!','Super!','Yay!','Wonderful!','Nice work!','Fantastic!','Way to go!'];
+const TRY = ['Try again!','Oops! Try again.','Almost! Try again.'];
+
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+function h(tag, attrs, ...kids){
+  const el = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)){
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'style' && typeof v === 'object'){
+      for (const [sk, sv] of Object.entries(v)){ if (sk.startsWith('--')) el.style.setProperty(sk, sv); else el.style[sk] = sv; }
+    }
+    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'hidden') el.hidden = true;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat(Infinity)){
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const shuffle = arr => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const uniq = arr => [...new Set(arr)];
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const ALPHA = 'abcdefghijklmnopqrstuvwxyz'.split('');
+const isMagicSound = s => s.includes('_');
+const cleanWord = t => t.replace(/[.,!?]/g, '');
+const firstVowel = w => [...w].findIndex(c => 'aeiouAEIOU'.includes(c));
+
+function hfWords(l){
+  if (l.hf !== 'review') return l.hf;
+  const out = [];
+  for (let k = l.n - 1; k >= 1 && out.length < 5; k--){
+    const prev = LESSON_BY_N[k];
+    if (prev.hf === 'review') continue;
+    for (const w of prev.hf) if (!out.includes(w) && out.length < 5) out.push(w);
+  }
+  return out;
+}
+const allWords = l => uniq([...(l.pairs || []).flat(), ...(l.words || [])]);
+const MAGIC_WORDS = new Set(LESSONS.flatMap(l => l.pairs ? [...l.pairs.map(p => p[1]), ...(l.words || [])] : []));
+
+// A shuffled list of length clamp(items, min, max) with no back-to-back repeats.
+function roundList(items, min, max){
+  const n = Math.max(min, Math.min(max, items.length));
+  let list = [];
+  while (list.length < n) list.push(...shuffle(items));
+  list = list.slice(0, n);
+  for (let i = 1; i < list.length; i++){
+    if (list[i] === list[i - 1] && items.length > 1){
+      const j = list.findIndex((x, k) => k > i && x !== list[i] && list[k - 1] !== list[i]);
+      if (j > 0) [list[i], list[j]] = [list[j], list[i]];
+    }
+  }
+  return list;
+}
+
+/* ---------- saved progress (this device only) ---------- */
+const STORE_KEY = 'phonics-fun-v1';
+const state = (() => {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
+  if (!s || typeof s !== 'object') s = {};
+  if (!s.done || typeof s.done !== 'object') s.done = {};
+  s.settings = Object.assign({rate:0.85, sfx:true, voice:''}, s.settings || {});
+  return s;
+})();
+function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+/* ---------- speech (Web Speech API) ---------- */
+let audioUnlocked = false;
+const Speech = {
+  ok: 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window,
+  voice: null, voices: [], gen: 0, current: null,
+  init(){
+    if (!this.ok) return;
+    const load = () => {
+      this.voices = speechSynthesis.getVoices().filter(v => /^en([-_]|$)/i.test(v.lang));
+      this.voice = this.choose();
+    };
+    load();
+    try { speechSynthesis.addEventListener('voiceschanged', load); } catch (e) { speechSynthesis.onvoiceschanged = load; }
+  },
+  choose(){
+    const vs = this.voices;
+    if (!vs.length) return null;
+    if (state.settings.voice){ const v = vs.find(v => v.voiceURI === state.settings.voice); if (v) return v; }
+    const score = v => {
+      let s = 0;
+      if (/en[-_]US/i.test(v.lang)) s += 4; else if (/en[-_](GB|AU|CA|IE|NZ)/i.test(v.lang)) s += 2;
+      if (/samantha|ava|allison|susan|karen|moira|serena|google us english|jenny|aria|zira|natural|enhanced|premium/i.test(v.name)) s += 3;
+      if (/albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|junior|organ|superstar|trinoids|whisper|wobble|zarvox|fred|ralph|kathy|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i.test(v.name)) s -= 10;
+      if (v.localService) s += 1;
+      return s;
+    };
+    return [...vs].sort((a, b) => score(b) - score(a))[0];
+  },
+  stop(){ this.gen++; if (this.ok) try { speechSynthesis.cancel(); } catch (e) {} },
+  speak(text, opts = {}){
+    const gen = ++this.gen;
+    return new Promise(resolve => {
+      if (!this.ok || !text || !audioUnlocked){ resolve(); return; }
+      let finished = false, timer = null;
+      const fin = () => { if (finished) return; finished = true; clearTimeout(timer); resolve(); };
+      const start = () => {
+        if (gen !== this.gen){ fin(); return; }
+        const u = new SpeechSynthesisUtterance(String(text));
+        if (this.voice){ u.voice = this.voice; u.lang = this.voice.lang; } else u.lang = 'en-US';
+        u.rate = Math.max(0.5, Math.min(1.4, (opts.rate || 1) * state.settings.rate));
+        u.pitch = opts.pitch || 1.08;
+        u.onend = fin; u.onerror = fin;
+        this.current = u; // keep a reference: some browsers drop events for collected utterances
+        try { speechSynthesis.speak(u); if (speechSynthesis.paused) speechSynthesis.resume(); } catch (e) { fin(); return; }
+        timer = setTimeout(fin, 2500 + String(text).length * 120 / u.rate);
+      };
+      if (speechSynthesis.speaking || speechSynthesis.pending){ speechSynthesis.cancel(); setTimeout(start, 70); }
+      else start();
+    });
+  },
+};
+
+/* ---------- sound effects (Web Audio, no files needed) ---------- */
+const Sfx = {
+  ctx: null,
+  ensure(){
+    if (!this.ctx){ const AC = window.AudioContext || window.webkitAudioContext; if (AC) try { this.ctx = new AC(); } catch (e) {} }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    return this.ctx;
+  },
+  tone(freq, dur, o = {}){
+    if (!state.settings.sfx || !audioUnlocked) return;
+    const c = this.ensure(); if (!c) return;
+    const t = c.currentTime + (o.when || 0);
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(freq, t);
+    if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol || 0.18, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(c.destination);
+    osc.start(t); osc.stop(t + dur + 0.05);
+  },
+  tap(){ this.tone(700, 0.06, {type:'triangle', vol:0.1}); },
+  tick(k){ this.tone(520 + k * 90, 0.08, {type:'triangle', vol:0.1}); },
+  good(){ [523, 659, 784].forEach((f, i) => this.tone(f, 0.2, {type:'triangle', when:i * 0.09, vol:0.16})); },
+  bad(){ this.tone(300, 0.28, {type:'sine', slide:170, vol:0.16}); },
+  pop(){ this.tone(420, 0.1, {type:'square', slide:1400, vol:0.07}); },
+  win(){ [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.28, {type:'triangle', when:i * 0.1, vol:0.15})); },
+};
+
+/* ---------- visual effects ---------- */
+function confetti(n = 50){
+  const colors = ['#ff5fa2','#ffd23f','#22c07a','#3d8bfd','#7c5cff','#ff9f1c','#18b8c9'];
+  for (let i = 0; i < n; i++){
+    const c = h('i', {class:'confetti', style:{
+      left: Math.random() * 100 + 'vw', background: colors[i % colors.length],
+      '--dx': (Math.random() * 240 - 120) + 'px', '--rot': (Math.random() * 900 - 450) + 'deg',
+      animationDuration: (1.6 + Math.random() * 1.5) + 's', animationDelay: (Math.random() * 0.35) + 's'}});
+    document.body.append(c);
+    setTimeout(() => c.remove(), 3800);
+  }
+}
+function burst(el){
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  for (let k = 0; k < 10; k++){
+    const ang = k / 10 * Math.PI * 2, dist = 60 + Math.random() * 60;
+    const s = h('span', {class:'spark', style:{left:cx + 'px', top:cy + 'px', '--tx':Math.cos(ang) * dist + 'px', '--ty':Math.sin(ang) * dist + 'px'}}, pick(['⭐','✨','🌟']));
+    document.body.append(s);
+    setTimeout(() => s.remove(), 900);
+  }
+}
+function replayAnim(el, cls){
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  const off = e => { if (e.target !== el) return; el.classList.remove(cls); el.removeEventListener('animationend', off); };
+  el.addEventListener('animationend', off);
+}
+const wiggle = el => replayAnim(el, 'shake');
+function reveal(btn){ btn.hidden = false; requestAnimationFrame(() => { try { btn.scrollIntoView({behavior:'smooth', block:'nearest'}); } catch (e) {} }); }
+const bounce = el => replayAnim(el, 'bounce');
+
+/* ---------- mascot (Leo the lion) ---------- */
+let lastSay = null, sayCount = 0, bubbleTimer = null;
+const bubbleEl = h('div', {class:'bubble', 'aria-live':'polite'});
+const lionEl = h('button', {class:'lion', 'aria-label':'Hear it again', onclick:() => { if (lastSay) say(lastSay.text, lastSay.speech); }}, '🦁');
+const mascotEl = h('div', {class:'mascot'}, lionEl, bubbleEl);
+document.body.append(mascotEl);
+// text = what the bubble shows, speech = what Leo says (so answers are never shown as text)
+function say(text, speech){
+  lastSay = {text, speech};
+  const my = ++sayCount;
+  bubbleEl.textContent = text;
+  bubbleEl.classList.add('show');
+  mascotEl.classList.add('talking');
+  clearTimeout(bubbleTimer);
+  return Speech.speak(speech == null ? text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '') : speech)
+    .then(() => {
+      if (my !== sayCount) return;
+      mascotEl.classList.remove('talking');
+      bubbleTimer = setTimeout(() => { if (my === sayCount) bubbleEl.classList.remove('show'); }, 6000);
+    });
+}
+
+/* ---------- navigation ---------- */
+let navId = 0, timers = [], cleanups = [], overlayEl = null;
+function later(fn, ms){ const id = navId; const t = setTimeout(() => { if (id === navId) fn(); }, ms); timers.push(t); return t; }
+function resetScope(){
+  navId++;
+  timers.forEach(clearTimeout); timers = [];
+  cleanups.forEach(f => { try { f(); } catch (e) {} }); cleanups = [];
+  Speech.stop(); closeOverlay();
+  mascotEl.classList.remove('talking');
+}
+function go(hash){ if (location.hash === hash || (hash === '#/' && !location.hash)) route(); else location.hash = hash; }
+function mount(...nodes){ $('#app').replaceChildren(...nodes.flat(Infinity).filter(Boolean)); window.scrollTo(0, 0); }
+function overlay(content, cls = ''){
+  closeOverlay();
+  overlayEl = h('div', {class:'overlay ' + cls}, h('div', {class:'panel'}, content));
+  document.body.append(overlayEl);
+  return overlayEl;
+}
+function closeOverlay(){ if (overlayEl){ overlayEl.remove(); overlayEl = null; } }
+
+function route(){
+  resetScope();
+  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (parts[0] === 'lesson' && LESSON_BY_N[+parts[1]]){
+    const l = LESSON_BY_N[+parts[1]];
+    const a = parts[2] && ACTS.find(x => x.key === parts[2]);
+    return a ? showActivity(l, a) : showLesson(l);
+  }
+  if (parts[0] === 'stickers') return showStickers();
+  if (parts[0] === 'parents') return showParents();
+  showHome();
+}
+
+/* ---------- progress helpers ---------- */
+const ACTS = [
+  {key:'sounds',   name:'Sounds',      icon:'🔤', color:'var(--purple)', run:actSounds},
+  {key:'trace',    name:'Trace',       icon:'✏️', color:'var(--orange)', run:actTrace},
+  {key:'read',     name:'Read Words',  icon:'📖', color:'var(--blue)',   run:actRead},
+  {key:'sight',    name:'Sight Words', icon:'👀', color:'var(--pink)',   run:actSight},
+  {key:'spell',    name:'Spell It',    icon:'🧩', color:'var(--green)',  run:actSpell},
+  {key:'sentence', name:'Sentence',    icon:'💬', color:'var(--teal)',   run:actSentence},
+  {key:'draw',     name:'Draw',        icon:'🎨', color:'var(--yellow)', run:actDraw},
+];
+const actName = (l, a) => a.key === 'read' && l.pairs ? 'Magic e' : a.name;
+const actIcon = (l, a) => a.key === 'read' && l.pairs ? '✨' : a.icon;
+const isDone = (n, k) => !!(state.done[n] && state.done[n][k]);
+const doneCount = n => ACTS.filter(a => isDone(n, a.key)).length;
+const lessonComplete = n => doneCount(n) === ACTS.length;
+const totalStars = () => LESSONS.reduce((t, l) => t + doneCount(l.n), 0);
+const PARENT_CHECK = [['Sounds','说发音',['sounds']],['Words','读单词',['read','sight']],['Writing','书写',['trace','spell']],['Sentence','读句子',['sentence']]];
+
+const COLORS = [['var(--purple)','var(--purple-d)'],['var(--pink)','var(--pink-d)'],['var(--blue)','var(--blue-d)'],['var(--green)','var(--green-d)'],['var(--orange)','var(--orange-d)'],['var(--teal)','var(--teal-d)']];
+const lessonColor = l => l.review ? ['var(--gold)','var(--gold-d)'] : COLORS[(l.n - 1) % COLORS.length];
+
+const starPill = () => h('div', {class:'pill', 'aria-label':'Stars'}, '⭐ ', totalStars());
+const backBtn = hash => h('button', {class:'icon-btn', 'aria-label':'Back', onclick:() => { Sfx.tap(); go(hash); }}, '⬅️');
+const listenBtn = fn => h('button', {class:'listen', 'aria-label':'Listen', onclick:() => { Sfx.tap(); fn(); }}, '🔊');
+
+function soundGlyph(s){ return isMagicSound(s) ? s : s.toUpperCase() + s; }
+function soundSay(s){
+  const kw = SOUND[s][0];
+  if (isMagicSound(s)){ const V = s[0].toUpperCase(); return `${V}, magic e! Magic e makes ${V} say its name. ${V}, like ${kw}.`; }
+  const L = s.toUpperCase();
+  if (s === 'x') return 'X. Box ends with X.';
+  return `${L}. ${L} is for ${kw}.`;
+}
+function soundName(s){ return isMagicSound(s) ? `${s[0].toUpperCase()}, magic e` : s.toUpperCase(); }
+
+/* =====================================================================
+   SCREENS
+   ===================================================================== */
+function showHome(){
+  const next = LESSONS.find(l => !lessonComplete(l.n));
+  const groups = [['🔤 Letters & Short Vowels', 1, 16], ['⭐ Short Vowel Review', 17, 19], ['✨ Magic e (silent e)', 20, 25]];
+  mount(
+    h('header', {class:'topbar'},
+      h('div', {class:'brand'}, h('span', {class:'logo'}, '🦁'), h('span', {class:'name'}, 'Phonics Fun')),
+      starPill(),
+      h('button', {class:'icon-btn', 'aria-label':'My stickers', onclick:() => { Sfx.tap(); go('#/stickers'); }}, '🏆'),
+      h('button', {class:'icon-btn', 'aria-label':'For parents', onclick:() => { Sfx.tap(); go('#/parents'); }}, '👪')),
+    groups.map(([title, a, b]) => [
+      h('h2', {class:'section-title'}, title),
+      h('div', {class:'lesson-grid'}, LESSONS.slice(a - 1, b).map(l => lessonBtn(l, l === next))),
+    ])
+  );
+  say(next && next.n > 1 ? `Let's play lesson ${next.n}! 👆` : 'Pick a lesson! 👆', next && next.n > 1 ? `Let's play lesson ${next.n}!` : 'Pick a lesson!');
+}
+
+function lessonBtn(l, isNext){
+  const [c, d] = lessonColor(l);
+  return h('button', {class:'lesson-btn' + (isNext ? ' next' : ''), style:{'--c':c, '--d':d}, 'aria-label':`Lesson ${l.n}: ${l.focus}`,
+      onclick:() => { Sfx.tap(); go('#/lesson/' + l.n); }},
+    h('span', {class:'num'}, l.n),
+    h('span', {class:'letters' + (l.label.length > 5 ? ' small' : '')}, l.label),
+    h('span', {class:'dots'}, ACTS.map(a => h('i', {class:isDone(l.n, a.key) ? 'on' : null}))),
+    lessonComplete(l.n) ? h('span', {class:'sticker'}, STICKERS[l.n - 1][0]) : null);
+}
+
+function showLesson(l){
+  const next = ACTS.find(a => !isDone(l.n, a.key));
+  mount(
+    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, `Lesson ${l.n}`), starPill()),
+    h('section', {class:'lesson-hero'},
+      h('div', {class:'hero-sounds'}, l.sounds.map(s => h('button', {class:'hero-chip', 'aria-label':'Hear ' + soundName(s),
+        onclick:e => { Sfx.tap(); bounce(e.currentTarget); say(soundSay(s)); }}, s))),
+      h('div', {class:'hero-focus'}, l.focus),
+      h('div', {class:'hero-hf'}, h('span', {class:'hf-label'}, '👀 Sight words:'),
+        hfWords(l).map(w => h('button', {class:'hf-chip', onclick:e => { Sfx.tap(); bounce(e.currentTarget); Speech.speak(w); }}, w)))),
+    h('div', {class:'act-grid'}, ACTS.map((a, i) => {
+      const done = isDone(l.n, a.key);
+      return h('button', {class:'act-card' + (done ? ' done' : '') + (a === next ? ' next' : ''), style:{'--c':a.color},
+          onclick:() => { Sfx.tap(); go(`#/lesson/${l.n}/${a.key}`); }},
+        h('span', {class:'step'}, i + 1),
+        done ? h('span', {class:'check'}, '✅') : null,
+        h('span', {class:'ic'}, actIcon(l, a)),
+        h('span', {class:'nm'}, actName(l, a)));
+    }))
+  );
+  if (next) say(`Lesson ${l.n}! Tap ${actIcon(l, next)} ${actName(l, next)}.`, `Lesson ${l.n}! Let's play ${actName(l, next)}.`);
+  else say(`You finished lesson ${l.n}! 🎉 Play again?`, `You finished lesson ${l.n}! Play again?`);
+}
+
+function showActivity(l, a){
+  const bar = h('i');
+  const stage = h('main', {class:'stage'});
+  const id = navId;
+  const ctx = {
+    lesson:l, stage, replay:null,
+    alive: () => id === navId,
+    progress: f => { bar.style.width = Math.round(Math.max(0, Math.min(1, f)) * 100) + '%'; },
+    done: () => { if (id === navId) finishActivity(l, a); },
+  };
+  mount(
+    h('header', {class:'topbar act-head'},
+      backBtn('#/lesson/' + l.n),
+      h('div', {class:'act-title'}, actIcon(l, a), ' ', h('span', {class:'nm'}, actName(l, a))),
+      h('div', {class:'progress', role:'progressbar', 'aria-label':'Progress'}, bar),
+      h('button', {class:'icon-btn', 'aria-label':'Hear again', onclick:() => { Sfx.tap(); if (ctx.replay) ctx.replay(); }}, '🔊')),
+    stage);
+  a.run(ctx);
+}
+
+function finishActivity(l, a){
+  const first = !isDone(l.n, a.key);
+  (state.done[l.n] = state.done[l.n] || {})[a.key] = true;
+  saveState();
+  Sfx.win(); confetti(60);
+  const idx = ACTS.indexOf(a);
+  const nextAct = ACTS.slice(idx + 1).find(x => !isDone(l.n, x.key)) || ACTS.slice(0, idx).find(x => !isDone(l.n, x.key));
+  const nextLesson = LESSON_BY_N[l.n + 1];
+  if (first && lessonComplete(l.n)){
+    const [emo, name] = STICKERS[l.n - 1];
+    overlay([
+      h('div', {class:'big-star'}, emo),
+      h('h1', {}, 'Lesson done!'),
+      h('p', {}, `You got a ${name} sticker!`),
+      h('div', {class:'row'},
+        nextLesson ? h('button', {class:'btn green big', onclick:() => go('#/lesson/' + nextLesson.n)}, `Lesson ${nextLesson.n} ➜`) : null,
+        h('button', {class:'btn pink', onclick:() => go('#/stickers')}, '🏆 My stickers'),
+        h('button', {class:'btn white', onclick:() => go('#/')}, '🏠 Home')),
+    ]);
+    say(`Hooray! You finished lesson ${l.n}! 🎉`, `Hooray! You finished lesson ${l.n}! You got a ${name} sticker!`);
+    confetti(80);
+    return;
+  }
+  overlay([
+    h('div', {class:'big-star'}, '⭐'),
+    h('h1', {}, pick(PRAISE)),
+    h('p', {}, first ? 'You earned a star!' : 'You did it again!'),
+    h('div', {class:'row'},
+      nextAct ? h('button', {class:'btn green big', onclick:() => go(`#/lesson/${l.n}/${nextAct.key}`)}, actIcon(l, nextAct), ' ', actName(l, nextAct), ' ➜')
+              : (nextLesson ? h('button', {class:'btn green big', onclick:() => go('#/lesson/' + nextLesson.n)}, `Lesson ${nextLesson.n} ➜`) : null),
+      h('button', {class:'btn white', onclick:() => go('#/lesson/' + l.n)}, '📚 Lesson ' + l.n)),
+  ]);
+  say(first ? 'You earned a star! ⭐' : 'Great job!', first ? 'Great job! You earned a star!' : 'Great job!');
+}
+
+function showStickers(){
+  const count = LESSONS.filter(l => lessonComplete(l.n)).length;
+  mount(
+    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, `🏆 My Stickers  ${count}/25`), starPill()),
+    h('div', {class:'sticker-grid'}, LESSONS.map(l => {
+      const got = lessonComplete(l.n);
+      const [emo, name] = STICKERS[l.n - 1];
+      return h('button', {class:'sticker-slot' + (got ? ' got' : ''), onclick:e => {
+          Sfx.tap(); bounce(e.currentTarget);
+          if (got) say(`A ${name}! 🎉`, `A ${name}!`); else say(`Finish lesson ${l.n} to get this sticker!`);
+        }},
+        h('span', {class:'st'}, got ? emo : '❔'), h('span', {class:'lb'}, `Lesson ${l.n}`));
+    })));
+  say(count ? `You have ${count} sticker${count > 1 ? 's' : ''}! 🎉` : 'Finish a lesson to get a sticker!',
+      count ? `You have ${count} sticker${count > 1 ? 's' : ''}!` : 'Finish a lesson to get a sticker!');
+}
+
+function showParents(){
+  const seg = (options, cur, onPick) => {
+    const wrap = h('div', {class:'seg'});
+    options.forEach(([label, val]) => wrap.append(h('button', {class:val === cur ? 'on' : null, onclick:e => {
+      [...wrap.children].forEach(b => b.classList.remove('on')); e.currentTarget.classList.add('on'); onPick(val);
+    }}, label)));
+    return wrap;
+  };
+  const voiceSel = h('select', {'aria-label':'Voice', onchange:e => { state.settings.voice = e.target.value; saveState(); Speech.voice = Speech.choose(); Speech.speak('Hi! I am Leo. Let us read!'); }},
+    h('option', {value:''}, 'Auto (best English voice)'),
+    Speech.voices.map(v => h('option', {value:v.voiceURI, selected:v.voiceURI === state.settings.voice}, `${v.name} (${v.lang})`)));
+  const tick = ok => ok ? '✅' : '⬜';
+  mount(
+    h('header', {class:'topbar'}, backBtn('#/'), h('div', {class:'title'}, '👪 Parents · 家长')),
+    h('section', {class:'panel-card'},
+      h('h2', {}, 'Quick Parent Guide · 家长指南'),
+      h('p', {}, 'Practice 10–15 minutes at a time. Have the child say each sound, blend sounds into words, and then write the word. For silent-e lessons, compare the short-vowel word with the long-vowel word.'),
+      h('p', {class:'zh'}, '每次练习 10–15 分钟。让孩子先说出每个字母的发音，再把发音拼读成单词，然后写出单词。在 silent-e（魔法 e）课中，对比短元音单词和长元音单词（例如 cap → cape）。'),
+      h('ul', {},
+        h('li', {}, '🔤 Sounds — “Say the sounds” · 说发音（点卡片听，再玩气球找字母）'),
+        h('li', {}, '✏️ Trace — write each sound · 用手指描写字母'),
+        h('li', {}, '📖 Read Words / ✨ Magic e — “Read the words” · 拼读单词、对比 cap → cape'),
+        h('li', {}, '👀 Sight Words — high-frequency words · 高频词'),
+        h('li', {}, '🧩 Spell It — “Write the words” + “Dictation” · 听音拼词'),
+        h('li', {}, '💬 Sentence — “Read a sentence” · 读句子、排句子'),
+        h('li', {}, '🎨 Draw — “Draw and label” · 画画并选一个单词做标签（可保存图片）')),
+      h('p', {class:'zh'}, '提示：请打开声音；平板或电脑体验最好。进度只保存在这台设备的浏览器里。点左下角的小狮子可以再听一遍。')),
+    h('section', {class:'panel-card'},
+      h('h2', {}, 'Settings · 设置'),
+      h('div', {class:'setting'}, h('label', {}, 'Voice speed · 语速'),
+        seg([['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak('This is my reading voice.'); })),
+      h('div', {class:'setting'}, h('label', {}, 'Sound effects · 音效'),
+        seg([['🔔 On', true], ['🔕 Off', false]], state.settings.sfx, v => { state.settings.sfx = v; saveState(); Sfx.good(); })),
+      h('div', {class:'setting'}, h('label', {}, 'Voice · 声音'),
+        Speech.ok && Speech.voices.length ? voiceSel : h('span', {}, Speech.ok ? 'Default voice' : 'Speech is not supported in this browser · 此浏览器不支持语音'))),
+    h('section', {class:'panel-card'},
+      h('h2', {}, 'Parent/teacher check · 学习记录'),
+      h('div', {class:'table-wrap'}, h('table', {class:'prog'},
+        h('thead', {}, h('tr', {}, h('th', {}, 'Lesson'), PARENT_CHECK.map(([en, zh]) => h('th', {}, en, h('br'), h('small', {}, zh))))),
+        h('tbody', {}, LESSONS.map(l => h('tr', {},
+          h('td', {class:'l'}, h('b', {}, `${l.n}. ${l.focus}`), h('br'), h('small', {}, 'HF: ' + hfWords(l).join(', '))),
+          PARENT_CHECK.map(([, , keys]) => h('td', {}, tick(keys.every(k => isDone(l.n, k)))))))))),
+      h('div', {class:'row', style:{marginTop:'14px', justifyContent:'flex-start'}},
+        h('button', {class:'btn red', onclick:() => {
+          const a = 2 + Math.floor(Math.random() * 7), b = 2 + Math.floor(Math.random() * 7);
+          const ans = window.prompt(`Reset all progress? Parents only.\n清除全部进度？请家长回答：${a} + ${b} = ?`);
+          if (ans != null && +ans === a + b){ state.done = {}; saveState(); route(); }
+        }}, '🗑️ Reset progress · 清除进度'))),
+    h('section', {class:'panel-card'},
+      h('p', {class:'zh'}, 'Based on the “Kindergarten Phonics Practice — 25-Lesson Home Practice Book” (original supplemental practice aligned to the Grade K lesson progression). It does not reproduce the commercial Student Workbook.'))
+  );
+  say('Hi grown-ups! 👋', 'Hi grown-ups!');
+}
+
+/* =====================================================================
+   ACTIVITIES
+   ===================================================================== */
+
+// 1 · Sounds: tap the cards, then pop the balloon with the sound you hear
+function actSounds(ctx){
+  const l = ctx.lesson, targets = l.sounds;
+  const order = roundList(targets, targets.length === 1 ? 4 : 6, 6);
+  const total = order.length + 1;
+  const seen = new Set();
+  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🎈 Play ➜');
+  const cards = targets.map(s => {
+    const [kw, pic] = SOUND[s];
+    const card = h('button', {class:'sound-card', 'aria-label':soundName(s), onclick:() => {
+        Sfx.tap(); bounce(card); card.classList.add('seen'); seen.add(s);
+        say('Say it with me! 🗣️', soundSay(s));
+        if (seen.size === targets.length) reveal(playBtn);
+      }},
+      h('span', {class:'glyph'}, soundGlyph(s)), h('span', {class:'pic'}, pic), h('span', {class:'kw'}, kw));
+    return card;
+  });
+  ctx.stage.replaceChildren(h('div', {class:'cards' + (targets.length > 4 ? ' many' : '')}, cards), playBtn);
+  ctx.progress(0);
+  const intro = () => say(targets.length > 1 ? 'Tap each card and say the sound! 👆' : 'Tap the card and say the sound! 👆');
+  ctx.replay = intro; intro();
+
+  function round(r){
+    if (r >= order.length){ ctx.progress(1); later(ctx.done, 300); return; }
+    ctx.progress((r + 1) / total);
+    const target = order[r];
+    const pool = isMagicSound(target)
+      ? uniq([...targets, ...shuffle(MAGIC_SOUNDS)]).filter(x => x !== target)
+      : uniq([...shuffle(targets), ...shuffle(ALPHA)]).filter(x => x !== target);
+    const opts = shuffle([target, ...pool.slice(0, 3)]);
+    const colors = ['var(--pink)','var(--blue)','var(--orange)','var(--green)','var(--purple)','var(--teal)'];
+    const prompt = () => say('Pop the balloon with the sound you hear! 🎈',
+      isMagicSound(target) ? `Find ${soundName(target)}. ${target[0].toUpperCase()}, like ${SOUND[target][0]}.` : `Pop the letter ${target.toUpperCase()}! ${target.toUpperCase()}, ${SOUND[target][0]}.`);
+    let solved = false, misses = 0;
+    const balloons = opts.map((s, i) => {
+      const b = h('button', {class:'balloon', 'aria-label':'balloon ' + s, style:{'--c':colors[(i + r) % colors.length], animationDelay:(i * 0.4) + 's'}, onclick:() => {
+        if (solved) return;
+        if (s === target){
+          solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
+          ctx.progress((r + 2) / total);
+          say(pick(PRAISE), `${pick(PRAISE)} ${soundName(target)}!`);
+          later(() => round(r + 1), 1500);
+        } else {
+          misses++; Sfx.bad(); wiggle(b);
+          say(pick(TRY), `That is ${soundName(s)}. Find ${soundName(target)}!`);
+          if (misses >= 2) balloons[opts.indexOf(target)].classList.add('hint');
+        }
+      }}, s);
+      return b;
+    });
+    ctx.stage.replaceChildren(listenBtn(prompt), h('div', {class:'balloons'}, balloons));
+    ctx.replay = prompt; prompt();
+  }
+}
+
+// 2 · Trace: trace letters (or silent-e words) with a finger
+function traceItems(l){
+  if (l.pairs) return l.pairs.map(p => p[1]).concat(l.words || []).slice(0, 5);
+  const s = l.sounds.length > 5 ? shuffle(l.sounds).slice(0, 5) : l.sounds;
+  return s.length <= 3 ? [...s, ...s] : s;
+}
+function actTrace(ctx){
+  const l = ctx.lesson, items = traceItems(l);
+  let i = 0, fails = 0, won = false, drawing = false, last = null, hue = 260;
+  const wrap = h('div', {class:'trace-wrap'});
+  const guide = h('canvas', {'aria-hidden':'true'}), ink = h('canvas', {'aria-label':'Tracing area'});
+  wrap.append(guide, ink);
+  const topPic = h('span', {class:'tp'}), topLabel = h('span');
+  const clearBtn = h('button', {class:'btn orange', onclick:() => { Sfx.tap(); clearInk(); }}, '🧽 Clear');
+  const doneBtn = h('button', {class:'btn green', onclick:() => check(true)}, '✔ Done');
+  ctx.stage.replaceChildren(h('div', {class:'trace-top'}, topPic, topLabel), wrap, h('div', {class:'row'}, clearBtn, doneBtn));
+
+  let W = 0, H = 0, dpr = 1, gctx, ictx, brush = 20, size = 100, mask = [], tol = null, mw = 0, mh = 0;
+  const small = document.createElement('canvas');
+  const font = px => `700 ${px}px Andika, 'Comic Sans MS', 'Chalkboard SE', sans-serif`;
+
+  function layout(){
+    const r = wrap.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.round(r.width); H = Math.round(r.height);
+    for (const c of [guide, ink]){ c.width = W * dpr; c.height = H * dpr; }
+    gctx = guide.getContext('2d');
+    ictx = ink.getContext('2d');
+    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawGuide();
+  }
+  function drawGuide(done){
+    const text = items[i];
+    gctx.font = font(100);
+    const asc = gctx.measureText('l').actualBoundingBoxAscent || 75;
+    const desc = gctx.measureText('g').actualBoundingBoxDescent || 25;
+    const xh = gctx.measureText('x').actualBoundingBoxAscent || 50;
+    const wid = gctx.measureText(text).width || 60;
+    size = Math.min(H * 0.8 / ((asc + desc) / 100), W * 0.84 / (wid / 100));
+    const A = asc * size / 100, D = desc * size / 100, X = xh * size / 100;
+    const base = (H - (A + D)) / 2 + A, cx = W / 2;
+    gctx.clearRect(0, 0, W, H);
+    // handwriting lines: top, dashed middle, baseline
+    gctx.lineWidth = 3; gctx.lineCap = 'round';
+    gctx.strokeStyle = '#c7dcff'; gctx.setLineDash([]); hline(base - A);
+    gctx.setLineDash([14, 12]); hline(base - X);
+    gctx.setLineDash([]); gctx.strokeStyle = '#ffb3be'; hline(base);
+    gctx.strokeStyle = '#c7dcff'; hline(base + D);
+    // the letter to trace
+    gctx.font = font(size); gctx.textAlign = 'center'; gctx.textBaseline = 'alphabetic';
+    gctx.fillStyle = done ? '#bff3d8' : '#ebe7fc';
+    gctx.fillText(text, cx, base);
+    gctx.setLineDash([2, Math.max(6, size * 0.05)]);
+    gctx.lineWidth = Math.max(3, size * 0.014); gctx.strokeStyle = done ? '#22c07a' : '#a597ee';
+    gctx.strokeText(text, cx, base);
+    gctx.setLineDash([]);
+    // masks for checking (half resolution)
+    brush = Math.max(14, size * 0.12);
+    mw = Math.ceil(W / 2); mh = Math.ceil(H / 2);
+    const mc = document.createElement('canvas'); mc.width = mw; mc.height = mh;
+    const m = mc.getContext('2d', {willReadFrequently:true});
+    m.setTransform(0.5, 0, 0, 0.5, 0, 0);
+    m.font = font(size); m.textAlign = 'center'; m.textBaseline = 'alphabetic'; m.fillStyle = '#000';
+    m.fillText(text, cx, base);
+    const md = m.getImageData(0, 0, mw, mh).data;
+    m.lineJoin = 'round'; m.lineWidth = brush * 1.6 + size * 0.04; m.strokeStyle = '#000';
+    m.strokeText(text, cx, base);
+    const td = m.getImageData(0, 0, mw, mh).data;
+    mask = []; tol = new Uint8Array(mw * mh);
+    for (let p = 0; p < mw * mh; p++){ if (md[p * 4 + 3] > 128) mask.push(p); if (td[p * 4 + 3] > 30) tol[p] = 1; }
+    small.width = mw; small.height = mh;
+  }
+  function hline(y){ gctx.beginPath(); gctx.moveTo(16, y); gctx.lineTo(W - 16, y); gctx.stroke(); }
+  function clearInk(){ if (ictx){ ictx.clearRect(0, 0, W, H); } }
+  function measure(){
+    const sc = small.getContext('2d', {willReadFrequently:true});
+    sc.clearRect(0, 0, mw, mh); sc.drawImage(ink, 0, 0, mw, mh);
+    const d = sc.getImageData(0, 0, mw, mh).data;
+    let cov = 0, inkN = 0, out = 0;
+    for (const p of mask) if (d[p * 4 + 3] > 30) cov++;
+    for (let p = 0; p < mw * mh; p++) if (d[p * 4 + 3] > 30){ inkN++; if (!tol[p]) out++; }
+    return {coverage: mask.length ? cov / mask.length : 0, outside: inkN ? out / inkN : 0, inkN};
+  }
+  function check(pressed){
+    if (won || !mask.length) return;
+    const {coverage, outside, inkN} = measure();
+    const relaxed = fails >= 2;
+    const pass = relaxed ? coverage >= 0.42 && outside <= 0.55 : coverage >= 0.6 && outside <= 0.4;
+    if (pass || (pressed && fails >= 4 && inkN > 0)){ success(); return; }
+    if (!pressed) return;
+    fails++; Sfx.bad(); wiggle(wrap);
+    if (inkN === 0) say('Use your finger to trace the letter! ☝️');
+    else if (outside > 0.4) say('Stay on the gray letter! 🙂');
+    else say('Keep going! Cover all of the gray letter. 🖍️');
+  }
+  function success(){
+    won = true; Sfx.good(); wrap.classList.add('win'); burst(wrap); drawGuide(true);
+    const text = items[i];
+    ctx.progress((i + 1) / items.length);
+    say(pick(PRAISE), `${pick(PRAISE)} ${text.length === 1 ? soundName(text) : text}!`);
+    later(() => { i++; if (i >= items.length){ ctx.done(); } else startItem(); }, 1600);
+  }
+  function startItem(){
+    won = false; fails = 0; wrap.classList.remove('win');
+    const text = items[i];
+    const isLetter = text.length === 1;
+    topPic.textContent = isLetter ? SOUND[text][1] : (PIC[text] || '✨');
+    topLabel.textContent = isLetter ? `${text}  ·  ${SOUND[text][0]}` : text;
+    clearInk(); if (W) drawGuide();
+    ctx.progress(i / items.length);
+    const prompt = () => say(isLetter ? 'Trace the letter with your finger! ✏️' : 'Trace the word with your finger! ✏️',
+      isLetter ? `Trace the letter ${soundName(text)}. ${soundName(text)} is for ${SOUND[text][0]}.` : `Trace the word, ${text}.`);
+    ctx.replay = prompt; prompt();
+  }
+
+  const pt = e => { const r = ink.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  function seg(a, b){
+    hue = (hue + 3) % 360;
+    ictx.strokeStyle = `hsl(${hue} 85% 55%)`; ictx.lineWidth = brush; ictx.lineCap = 'round'; ictx.lineJoin = 'round';
+    ictx.beginPath(); ictx.moveTo(a.x, a.y); ictx.lineTo(b.x, b.y); ictx.stroke();
+  }
+  ink.addEventListener('pointerdown', e => {
+    if (won || !ictx) return;
+    e.preventDefault(); try { ink.setPointerCapture(e.pointerId); } catch (err) {}
+    drawing = true; last = pt(e); seg(last, {x:last.x + 0.1, y:last.y});
+  });
+  ink.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(last, p); last = p; }
+  });
+  const end = () => { if (!drawing) return; drawing = false; check(false); };
+  ink.addEventListener('pointerup', end);
+  ink.addEventListener('pointercancel', end);
+
+  const ro = new ResizeObserver(() => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); });
+  cleanups.push(() => ro.disconnect());
+  const fontReady = document.fonts && document.fonts.load ? Promise.race([document.fonts.load(font(100)), wait(2500)]) : Promise.resolve();
+  fontReady.catch(() => {}).then(() => { if (!ctx.alive()) return; ro.observe(wrap); layout(); });
+  startItem();
+}
+
+// 3 · Read words: sound out word cards, then listen & choose
+function wordEl(word, magic){
+  if (magic == null) magic = MAGIC_WORDS.has(word);
+  const vi = magic ? firstVowel(word) : -1;
+  return h('span', {class:'word'}, [...word].map((ch, k) =>
+    h('span', {class:'lt' + (k === vi ? ' long' : '') + (magic && k === word.length - 1 && ch === 'e' ? ' silent' : '')}, ch)));
+}
+async function soundOut(we, word){
+  const id = navId;
+  const letters = [...we.querySelectorAll('.lt')];
+  for (let k = 0; k < letters.length; k++){
+    if (id !== navId) return;
+    letters[k].classList.add('lit'); Sfx.tick(k);
+    await wait(380);
+    letters[k].classList.remove('lit');
+  }
+  if (id !== navId) return;
+  we.classList.add('whole');
+  await Speech.speak(word, {rate:0.9});
+  we.classList.remove('whole');
+}
+function distractorWords(l, target, k){
+  const out = [];
+  if (l.pairs){ const p = l.pairs.find(p => p.includes(target)); if (p) out.push(p[0] === target ? p[1] : p[0]); }
+  const same = w => w.toLowerCase() === target.toLowerCase() || out.includes(w);
+  for (const w of shuffle(allWords(l))) if (out.length < k && !same(w)) out.push(w);
+  if (out.length < k) for (const w of shuffle(uniq(LESSONS.filter(x => x.n < l.n).flatMap(allWords)))) if (out.length < k && !same(w)) out.push(w);
+  if (out.length < k) for (const w of shuffle(hfWords(l))) if (out.length < k && !same(w)) out.push(w);
+  return out;
+}
+function wordQuiz(ctx, targets, doneSteps, total, onDone){
+  const l = ctx.lesson;
+  const round = r => {
+    if (r >= targets.length){ onDone(); return; }
+    ctx.progress((doneSteps + r) / total);
+    const target = targets[r];
+    const opts = shuffle([target, ...distractorWords(l, target, 2)]);
+    const pic = h('div', {class:'quiz-pic'}, PIC[target] || '⭐');
+    const prompt = () => say('Listen, then tap the word you hear! 👂', `Find the word: ${target}.`);
+    let solved = false, misses = 0;
+    const btns = opts.map(w => {
+      const b = h('button', {class:'choice', onclick:() => {
+        if (solved) return;
+        if (w === target){
+          solved = true; b.classList.add('right'); Sfx.good(); burst(b); pic.classList.add('show');
+          ctx.progress((doneSteps + r + 1) / total);
+          say(pick(PRAISE), `${pick(PRAISE)} ${target}!`);
+          later(() => round(r + 1), 1600);
+        } else {
+          misses++; Sfx.bad(); wiggle(b);
+          say(pick(TRY), `That says ${w}. Find ${target}.`);
+          if (misses >= 2) btns[opts.indexOf(target)].classList.add('hint');
+        }
+      }}, wordEl(w));
+      return b;
+    });
+    ctx.stage.replaceChildren(listenBtn(prompt), pic, h('div', {class:'choices'}, btns));
+    ctx.replay = prompt; prompt();
+  };
+  round(0);
+}
+function actRead(ctx){
+  const l = ctx.lesson;
+  if (l.pairs) return actMagic(ctx);
+  const words = l.words;
+  const quiz = roundList(words, 4, 6);
+  const total = quiz.length + 1;
+  const seen = new Set();
+  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); wordQuiz(ctx, quiz, 1, total, () => { ctx.progress(1); later(ctx.done, 300); }); }}, '🎮 Play ➜');
+  const cards = words.map(w => {
+    const we = wordEl(w, false);
+    let busy = false;
+    const card = h('button', {class:'word-card', 'aria-label':w, onclick:async () => {
+        if (busy) return; busy = true; Sfx.tap();
+        await soundOut(we, w);
+        busy = false;
+        if (!ctx.alive()) return;
+        card.classList.add('seen'); seen.add(w);
+        if (seen.size === words.length) reveal(playBtn);
+      }},
+      we, h('span', {class:'arrow'}, '• • ➜'), h('span', {class:'wpic'}, PIC[w] || ''));
+    return card;
+  });
+  ctx.stage.replaceChildren(h('div', {class:'cards'}, cards), playBtn);
+  ctx.progress(0);
+  const intro = () => say('Tap a word. Sound it out, then read it! 📖');
+  ctx.replay = intro; intro();
+}
+
+// 3b · Magic e (silent-e lessons): add the e and hear the vowel change
+function actMagic(ctx){
+  const l = ctx.lesson, pairs = l.pairs, singles = l.words || [];
+  const steps = pairs.length + singles.length;
+  const quiz = shuffle(allWords(l)).slice(0, 8);
+  const total = steps + quiz.length;
+  let i = 0;
+  const learn = () => {
+    if (i >= steps){ wordQuiz(ctx, quiz, steps, total, () => { ctx.progress(1); later(ctx.done, 300); }); return; }
+    ctx.progress(i / total);
+    const nextBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); i++; learn(); }}, 'Next ➜');
+    if (i < pairs.length){
+      const [short, long] = pairs[i];
+      const wordBox = h('div', {class:'magic-word'}, wordEl(short, false), h('span', {class:'eslot'}, 'e'));
+      const pic = h('div', {class:'magic-pic'}, PIC[short] || '');
+      let magicDone = false;
+      const hear = () => magicDone
+        ? say(`${short} ➜ ${long}`, `${short}. ${long}!`)
+        : say('Tap the magic e! ✨', `This says ${short}. Tap the magic e!`);
+      const wand = h('button', {class:'btn pink big wand', onclick:() => {
+        if (magicDone) return;
+        magicDone = true; Sfx.pop(); Sfx.good(); burst(wand); wand.hidden = true;
+        const we = wordEl(long, true);
+        wordBox.replaceChildren(we); bounce(we);
+        pic.textContent = PIC[long] || '✨';
+        reveal(nextBtn);
+        say(`${short} ➜ ${long}`, `${short}... ${long}! Magic e makes ${long[firstVowel(long)].toUpperCase()} say its name.`);
+      }}, '🪄 magic e');
+      const again = h('button', {class:'btn white', onclick:() => { Sfx.tap(); hear(); }}, '🔊');
+      ctx.stage.replaceChildren(h('div', {class:'magic-box'}, pic, wordBox, h('div', {class:'row'}, again, wand)), nextBtn);
+      ctx.replay = hear; hear();
+    } else {
+      const w = singles[i - pairs.length];
+      const we = wordEl(w, true);
+      const hear = () => say(`${w} ✨`, `${w}. Magic e!`);
+      ctx.stage.replaceChildren(h('div', {class:'magic-box'}, h('div', {class:'magic-pic'}, PIC[w] || '✨'), h('div', {class:'magic-word'}, we),
+        h('button', {class:'btn white', onclick:() => { Sfx.tap(); bounce(we); hear(); }}, '🔊')), nextBtn);
+      nextBtn.hidden = false;
+      ctx.replay = hear; hear();
+    }
+  };
+  learn();
+}
+
+// 4 · Sight words: tap the cards, then pop the bubble with the word you hear
+function actSight(ctx){
+  const l = ctx.lesson, words = hfWords(l);
+  const pool = uniq(LESSONS.filter(x => x.n <= l.n).flatMap(hfWords));
+  const order = roundList(words, 5, 8);
+  const total = order.length + 1;
+  const seen = new Set();
+  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🫧 Play ➜');
+  const cards = words.map(w => {
+    const card = h('button', {class:'word-card', onclick:() => {
+      Sfx.tap(); bounce(card); card.classList.add('seen'); seen.add(w);
+      say('Read it with me! 👀', w);
+      if (seen.size === words.length) reveal(playBtn);
+    }}, wordEl(w, false));
+    return card;
+  });
+  ctx.stage.replaceChildren(h('div', {class:'cards'}, cards), playBtn);
+  ctx.progress(0);
+  const intro = () => say('These are sight words. Tap each one! 👆');
+  ctx.replay = intro; intro();
+
+  function round(r){
+    if (r >= order.length){ ctx.progress(1); later(ctx.done, 300); return; }
+    ctx.progress((r + 1) / total);
+    const target = order[r];
+    const others = uniq([...shuffle(words), ...shuffle(pool)]).filter(w => w !== target).slice(0, 3);
+    const opts = shuffle([target, ...others]);
+    const colors = ['var(--teal)','var(--pink)','var(--purple)','var(--blue)'];
+    const prompt = () => say('Pop the word you hear! 🫧', `Pop the word: ${target}.`);
+    let solved = false, misses = 0;
+    const bubbles = opts.map((w, k) => {
+      const b = h('button', {class:'balloon bubble-word', style:{'--c':colors[(k + r) % colors.length], animationDelay:(k * 0.35) + 's'},
+        onclick:() => {
+          if (solved) return;
+          if (w === target){
+            solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
+            ctx.progress((r + 2) / total);
+            say(pick(PRAISE), `${pick(PRAISE)} ${target}!`);
+            later(() => round(r + 1), 1500);
+          } else {
+            misses++; Sfx.bad(); wiggle(b);
+            say(pick(TRY), `That says ${w}. Find ${target}.`);
+            if (misses >= 2) bubbles[opts.indexOf(target)].classList.add('hint');
+          }
+        }}, w);
+      return b;
+    });
+    ctx.stage.replaceChildren(listenBtn(prompt), h('div', {class:'balloons bubbles'}, bubbles));
+    ctx.replay = prompt; prompt();
+  }
+}
+
+// 5 · Spell it (write the words + dictation): hear the word, tap the letters in order
+function spellWords(l){
+  if (l.pairs){ return shuffle(l.pairs).slice(0, 3).flat(); }
+  let w = allWords(l);
+  if (w.length < 3) w = uniq([...w, ...hfWords(l).filter(x => x.length <= 4)]);
+  return shuffle(w).slice(0, 6);
+}
+function spellExtras(l, word, k){
+  const inWord = new Set([...word.toLowerCase()]);
+  const confusing = new Set(word.includes('I') ? ['l','i'] : []);
+  const pool = uniq([...shuffle(l.sounds.filter(s => s.length === 1)), ...shuffle(ALPHA)]).filter(c => !inWord.has(c) && !confusing.has(c));
+  return pool.slice(0, k);
+}
+function actSpell(ctx){
+  const l = ctx.lesson, list = spellWords(l);
+  const round = r => {
+    if (r >= list.length){ ctx.progress(1); later(ctx.done, 300); return; }
+    ctx.progress(r / list.length);
+    const word = list[r], chars = [...word];
+    let pos = 0, misses = 0, solved = false;
+    const slots = chars.map(() => h('div', {class:'slot'}));
+    const pic = h('div', {class:'spell-pic'}, PIC[word] || '👂');
+    const prompt = () => say('Listen and spell the word! 👂', `Spell the word: ${word}.`);
+    const tiles = shuffle([...chars, ...spellExtras(l, word, word.length > 1 ? 2 : 3)]).map(ch => {
+      const t = h('button', {class:'tile', onclick:() => {
+        if (solved || t.classList.contains('used')) return;
+        if (ch === chars[pos]){
+          t.classList.add('used'); slots[pos].textContent = ch; slots[pos].classList.add('filled');
+          pos++; misses = 0; Sfx.tick(pos);
+          tiles.forEach(x => x.classList.remove('hint'));
+          if (pos === chars.length){
+            solved = true; Sfx.good(); burst(slotRow);
+            ctx.progress((r + 1) / list.length);
+            say(pick(PRAISE), `${pick(PRAISE)} ${chars.join(', ')}. ${word}!`);
+            later(() => round(r + 1), 2600);
+          }
+        } else {
+          misses++; Sfx.bad(); wiggle(t);
+          if (misses === 1) Speech.speak(word, {rate:0.8});
+          if (misses >= 2){ const hint = tiles.find(x => !x.classList.contains('used') && x.textContent === chars[pos]); if (hint) hint.classList.add('hint'); }
+        }
+      }}, ch);
+      return t;
+    });
+    const slotRow = h('div', {class:'slots'}, slots);
+    ctx.stage.replaceChildren(h('div', {class:'row'}, listenBtn(prompt), pic), slotRow, h('div', {class:'tiles'}, tiles));
+    ctx.replay = prompt; prompt();
+  };
+  round(0);
+}
+
+// 6 · Sentence: read along, then put the words in order
+function actSentence(ctx){
+  const l = ctx.lesson, sents = l.sentences, total = sents.length * 2;
+  let readTok = 0;
+  const readPhase = k => {
+    ctx.progress((k * 2) / total);
+    const [text, picture] = sents[k];
+    const tokens = text.split(' ');
+    const chips = tokens.map(t => h('button', {class:'wchip', onclick:e => {
+      readTok++; chips.forEach(c => c.classList.remove('hl'));
+      Sfx.tap(); bounce(e.currentTarget); Speech.speak(cleanWord(t));
+    }}, t));
+    const readAlong = async () => {
+      const my = ++readTok, id = navId;
+      for (let j = 0; j < chips.length; j++){
+        if (my !== readTok || id !== navId) return;
+        chips[j].classList.add('hl');
+        await Speech.speak(cleanWord(tokens[j]), {rate:0.95});
+        chips[j].classList.remove('hl');
+        await wait(90);
+      }
+      if (my !== readTok || id !== navId) return;
+      await wait(250);
+      if (my === readTok && id === navId) Speech.speak(text, {rate:0.95});
+    };
+    ctx.stage.replaceChildren(
+      h('div', {class:'sent-pic'}, picture),
+      h('div', {class:'sentence'}, chips),
+      h('div', {class:'row'},
+        h('button', {class:'btn blue', onclick:() => { Sfx.tap(); readAlong(); }}, '🔊 Read to me'),
+        h('button', {class:'btn green big', onclick:() => { readTok++; Sfx.good(); buildPhase(k); }}, '✅ I read it!')));
+    ctx.replay = readAlong;
+    const tok0 = readTok;
+    say('Read the sentence with me! Tap a word for help. 💬', 'Read the sentence with me!').then(() => { if (ctx.alive() && readTok === tok0) readAlong(); });
+  };
+  const buildPhase = k => {
+    ctx.progress((k * 2 + 1) / total);
+    const [text, picture] = sents[k];
+    const tokens = text.split(' ');
+    let order = shuffle(tokens.map((t, idx) => idx));
+    for (let tries = 0; tries < 5 && tokens.length > 1 && order.every((v, idx) => v === idx); tries++) order = shuffle(order);
+    let pos = 0, misses = 0, solved = false;
+    const slots = tokens.map(t => h('span', {class:'wslot', style:{minWidth:(t.length * 0.62 + 0.6) + 'em'}}));
+    const prompt = () => say('Put the words in order! 🧩', `Put the words in order. ${text}`);
+    const chips = order.map(idx => {
+      const t = tokens[idx];
+      const c = h('button', {class:'wchip', onclick:() => {
+        if (solved || c.classList.contains('used')) return;
+        if (t === tokens[pos]){
+          c.classList.add('used'); slots[pos].textContent = t; slots[pos].classList.add('filled');
+          pos++; misses = 0; Sfx.tick(pos); chips.forEach(x => x.classList.remove('hint'));
+          if (pos === tokens.length){
+            solved = true; Sfx.good(); confetti(25);
+            ctx.progress((k * 2 + 2) / total);
+            say(pick(PRAISE), `${pick(PRAISE)} ${text}`).then(() => later(() => { if (k + 1 < sents.length) readPhase(k + 1); else ctx.done(); }, 500));
+          } else Speech.speak(cleanWord(t));
+        } else {
+          misses++; Sfx.bad(); wiggle(c);
+          if (misses >= 2){ const hint = chips.find(x => !x.classList.contains('used') && x.textContent === tokens[pos]); if (hint) hint.classList.add('hint'); }
+        }
+      }}, t);
+      return c;
+    });
+    ctx.stage.replaceChildren(h('div', {class:'row'}, listenBtn(prompt), h('div', {class:'sent-pic small'}, picture)),
+      h('div', {class:'sentence'}, slots), h('div', {class:'sentence'}, chips));
+    ctx.replay = prompt; prompt();
+  };
+  readPhase(0);
+}
+
+// 7 · Draw and label
+function actDraw(ctx){
+  const l = ctx.lesson, words = allWords(l);
+  const colors = ['#2b2250','#ff5a5f','#ff9f1c','#ffd23f','#22c07a','#3d8bfd','#7c5cff','#ff5fa2','#8b5a2b'];
+  let color = colors[1], size = 12, erasing = false, label = '', hasInk = false, drawing = false, last = null;
+  const history = [];
+  const wrap = h('div', {class:'draw-wrap'});
+  const cv = h('canvas', {'aria-label':'Drawing area'});
+  wrap.append(cv);
+  const labelEl = h('div', {class:'draw-label'}, '');
+  const swatches = colors.map(c => h('button', {class:'swatch' + (c === color ? ' on' : ''), style:{background:c}, 'aria-label':'color', onclick:e => {
+    Sfx.tap(); color = c; erasing = false; eraser.classList.remove('on');
+    swatches.forEach(s => s.classList.remove('on')); e.currentTarget.classList.add('on');
+  }}));
+  const sizes = [[6, 8], [12, 14], [24, 22]].map(([s, dot]) => h('button', {class:'tool' + (s === size ? ' on' : ''), 'aria-label':'brush size', onclick:e => {
+    Sfx.tap(); size = s; sizes.forEach(x => x.classList.remove('on')); e.currentTarget.classList.add('on');
+  }}, h('span', {class:'dot', style:{width:dot + 'px', height:dot + 'px'}})));
+  const eraser = h('button', {class:'tool', 'aria-label':'eraser', onclick:() => { Sfx.tap(); erasing = !erasing; eraser.classList.toggle('on', erasing); }}, '🧽');
+  const undoBtn = h('button', {class:'tool', 'aria-label':'undo', onclick:() => { Sfx.tap(); const snap = history.pop(); if (snap) c2d.putImageData(snap, 0, 0); }}, '↩️');
+  const clearBtn = h('button', {class:'tool', 'aria-label':'clear', onclick:() => { Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; }}, '🗑️');
+  const bank = h('div', {class:'word-bank'}, words.map(w => h('button', {class:'wchip', onclick:e => {
+    Sfx.tap(); label = w; labelEl.textContent = (PIC[w] ? PIC[w] + ' ' : '') + w;
+    [...bank.children].forEach(c => c.classList.remove('on')); e.currentTarget.classList.add('on');
+    Speech.speak(w);
+  }}, w)));
+  const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
+  const doneBtn = h('button', {class:'btn green big', onclick:() => {
+    if (!hasInk){ Sfx.bad(); wiggle(wrap); say('Draw a picture first! 🖍️'); return; }
+    if (!label){ Sfx.bad(); replayAnim(bank, 'nudge'); say('Now tap a word for your picture! 🏷️'); return; }
+    say('My picture: ' + label + '! 🎨', `Your picture is: ${label}! Great drawing!`).then(() => later(ctx.done, 200));
+  }}, '✅ Done');
+  wrap.append(labelEl);
+  ctx.stage.classList.add('compact');
+  ctx.stage.replaceChildren(
+    h('div', {class:'draw-tools'}, swatches, sizes, eraser, undoBtn, clearBtn, saveBtn),
+    wrap, h('div', {class:'row'}, bank, doneBtn));
+  ctx.progress(0);
+  const intro = () => say(`Draw something you can read! Then tap a word. 🎨`, 'Draw something you can read or spell! Then tap a word for your picture.');
+  ctx.replay = intro; intro();
+
+  let c2d = null, W = 0, H = 0, dpr = 1;
+  function paintWhite(){ c2d.save(); c2d.setTransform(1, 0, 0, 1, 0, 0); c2d.fillStyle = '#fff'; c2d.fillRect(0, 0, cv.width, cv.height); c2d.restore(); }
+  function pushHistory(){ try { history.push(c2d.getImageData(0, 0, cv.width, cv.height)); if (history.length > 8) history.shift(); } catch (e) {} }
+  function layout(){
+    const r = wrap.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const old = c2d && cv.width ? (() => { const t = document.createElement('canvas'); t.width = cv.width; t.height = cv.height; t.getContext('2d').drawImage(cv, 0, 0); return t; })() : null;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.round(r.width); H = Math.round(r.height);
+    cv.width = W * dpr; cv.height = H * dpr;
+    c2d = cv.getContext('2d');
+    paintWhite();
+    if (old) c2d.drawImage(old, 0, 0, cv.width, cv.height);
+    c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+    history.length = 0;
+  }
+  const pt = e => { const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  function seg(a, b){
+    c2d.strokeStyle = erasing ? '#fff' : color; c2d.lineWidth = erasing ? size * 2 : size;
+    c2d.lineCap = 'round'; c2d.lineJoin = 'round';
+    c2d.beginPath(); c2d.moveTo(a.x, a.y); c2d.lineTo(b.x, b.y); c2d.stroke();
+  }
+  cv.addEventListener('pointerdown', e => {
+    if (!c2d) return;
+    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    pushHistory(); drawing = true; last = pt(e); seg(last, {x:last.x + 0.1, y:last.y});
+    if (!erasing) hasInk = true;
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!drawing) return;
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(last, p); last = p; }
+  });
+  const end = () => { drawing = false; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  function savePicture(){
+    const out = document.createElement('canvas');
+    out.width = cv.width; out.height = cv.height + Math.round(90 * dpr);
+    const o = out.getContext('2d');
+    o.fillStyle = '#fff'; o.fillRect(0, 0, out.width, out.height);
+    o.drawImage(cv, 0, 0);
+    o.fillStyle = '#7c5cff'; o.textAlign = 'center'; o.textBaseline = 'middle';
+    o.font = `700 ${Math.round(44 * dpr)}px Andika, 'Comic Sans MS', sans-serif`;
+    o.fillText(label || `Lesson ${l.n}`, out.width / 2, cv.height + 45 * dpr);
+    out.toBlob(blob => {
+      if (!blob) return;
+      const a = h('a', {href:URL.createObjectURL(blob), download:`phonics-lesson-${l.n}-${label || 'picture'}.png`});
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+  }
+  const ro = new ResizeObserver(() => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); });
+  ro.observe(wrap);
+  cleanups.push(() => ro.disconnect());
+}
+
+/* =====================================================================
+   START
+   ===================================================================== */
+Speech.init();
+window.addEventListener('hashchange', route);
+document.addEventListener('visibilitychange', () => { if (document.hidden) Speech.stop(); });
+route();
+overlay([
+  h('div', {class:'hero-lion'}, '🦁'),
+  h('h1', {}, 'Phonics Fun!'),
+  h('p', {}, 'Kindergarten phonics · 25 lessons'),
+  h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
+    audioUnlocked = true; Sfx.ensure(); Sfx.win();
+    closeOverlay();
+    const greet = location.hash.length > 2 ? null : "Hi! I'm Leo. Let's learn to read!";
+    if (greet) say("Hi! I'm Leo. Let's learn to read! 📚", greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
+    else route();
+  }}, '▶ Play')),
+], 'splash');
+})();
+</script>
+</body>
+</html>
