@@ -90,7 +90,7 @@ button{font-family:inherit;color:inherit}
 .lesson-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:16px 14px}
 .lesson-btn{
   --c:var(--purple);--d:var(--purple-d);
-  position:relative;aspect-ratio:1/1;border-radius:30px;border:0;background:var(--c);box-shadow:0 7px 0 var(--d);color:#fff;cursor:pointer;
+  position:relative;aspect-ratio:1/1;min-height:100px;border-radius:30px;border:0;background:var(--c);box-shadow:0 7px 0 var(--d);color:#fff;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;transition:transform .08s,box-shadow .08s
 }
 .lesson-btn:active{transform:translateY(4px);box-shadow:0 3px 0 var(--d)}
@@ -227,7 +227,7 @@ button{font-family:inherit;color:inherit}
 .trace-top{display:flex;align-items:center;gap:12px;font-family:var(--font-read);font-weight:700;font-size:clamp(1.3rem,4vw,1.8rem)}
 .trace-top .tp{font-size:clamp(2.2rem,7vw,3rem)}
 .trace-wrap{position:relative;width:min(100%,760px);height:clamp(230px,50vh,520px);background:#fff;border-radius:30px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
-.trace-wrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.trace-wrap canvas{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;touch-action:none}
 .trace-wrap.win{box-shadow:0 8px 0 #7fdcaa,0 0 0 6px #b8f5d4}
 
 /* drawing */
@@ -239,7 +239,7 @@ button{font-family:inherit;color:inherit}
 .tool .dot{display:block;border-radius:50%;background:var(--ink)}
 .stage.compact{gap:14px;justify-content:flex-start}
 .draw-wrap{position:relative;width:min(100%,820px);height:clamp(210px,44vh,470px);background:#fff;border-radius:26px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
-.draw-wrap canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.draw-wrap canvas{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
 .draw-label{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;
   font-family:var(--font-read);font-weight:700;font-size:clamp(1.5rem,4.6vw,2.2rem);color:var(--purple);background:rgba(255,255,255,.85);border-radius:14px;padding:0 .4em}
 .draw-label:empty{display:none}
@@ -287,7 +287,7 @@ table.prog td.l small{color:var(--ink-soft)}
 .mascot .bubble::before{content:'';position:absolute;left:-10px;bottom:12px;border:10px solid transparent;border-right-color:#fff;border-left:0}
 
 /* overlays */
-.overlay{position:fixed;inset:0;background:rgba(43,34,80,.45);display:grid;place-items:center;z-index:50;padding:16px;animation:fade .2s}
+.overlay{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(43,34,80,.45);display:grid;place-items:center;z-index:50;padding:16px;animation:fade .2s;overflow-y:auto}
 .overlay .panel{background:#fff;border-radius:34px;padding:26px 22px 24px;text-align:center;max-width:520px;width:100%;box-shadow:0 12px 0 rgba(0,0,0,.14);animation:pop-in .4s cubic-bezier(.2,1.6,.4,1)}
 .overlay h1{margin:6px 0 4px;font-size:clamp(1.9rem,6vw,2.6rem)}
 .overlay p{margin:0 0 18px;font-size:1.25rem;color:var(--ink-soft);font-weight:600}
@@ -331,8 +331,56 @@ table.prog td.l small{color:var(--ink-soft)}
   .brand .name{overflow:hidden;text-overflow:ellipsis}
   .pill{font-size:1.05rem;padding:.3em .6em}
 }
+/* phones held sideways and other short screens */
+@media (max-height:520px){
+  #app{padding-top:max(6px,env(safe-area-inset-top));padding-bottom:calc(58px + env(safe-area-inset-bottom))}
+  .topbar{margin-bottom:6px}
+  .icon-btn{width:44px;height:44px;font-size:1.25rem}
+  .progress{height:16px}
+  .stage{min-height:0;gap:10px;padding:2px 0}
+  .stage.compact{gap:8px}
+  .btn{min-height:46px;font-size:1.05rem;padding:.35em .9em}
+  .btn.big{min-height:50px;font-size:1.2rem}
+  .listen{width:58px;height:58px;font-size:1.7rem}
+  .mascot .lion{font-size:42px}
+  .mascot .bubble{font-size:.9rem;padding:6px 12px;margin-bottom:10px;max-width:min(440px,52vw)}
+  .trace-top{display:none}
+  .trace-wrap{height:calc(100vh - 142px);min-height:160px}
+  .draw-tools{gap:5px}
+  .swatch{width:32px;height:32px;border-width:3px}
+  .tool{width:36px;height:36px;font-size:1.1rem}
+  .draw-wrap{height:calc(100vh - 176px);min-height:140px}
+  .word-bank .wchip{font-size:1.15rem}
+  .slot{width:52px;height:62px;font-size:2.1rem}
+  .tile{width:52px;height:56px;font-size:2rem}
+  .spell-pic,.sent-pic,.sent-pic.small{font-size:2.4rem}
+  .quiz-pic{font-size:2.6rem}
+  .sentence{font-size:1.7rem;gap:8px}
+  .balloons{padding:4px 0 34px}
+  .balloon{width:88px;height:106px;font-size:2.3rem}
+  .balloon.bubble-word{width:104px;height:104px;font-size:1.45rem}
+  .sound-card{width:104px}
+  .sound-card .glyph{font-size:2.6rem}
+  .word-card{padding:8px 16px 6px}
+  .word{font-size:2.2rem}
+  .magic-box{padding:12px 18px;gap:8px}
+  .magic-word .word,.eslot{font-size:3rem}
+  .magic-pic{font-size:2.4rem}
+  .choice{font-size:2rem}
+  .lesson-hero{padding:10px;margin-bottom:12px;gap:6px}
+  .overlay .panel{padding:14px 18px}
+  .big-star{font-size:3.4rem}
+  .overlay h1{font-size:1.6rem;margin:2px 0}
+  .overlay p{margin-bottom:10px;font-size:1.05rem}
+  .overlay .row{flex-direction:row;flex-wrap:wrap}
+  .overlay .row .btn{width:auto}
+  .splash .hero-lion{font-size:4.5rem}
+  .splash h1{font-size:2.4rem;margin:0}
+}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .hint,.shake{animation:none!important}
+  .hint{outline:5px solid var(--yellow);outline-offset:3px}
 }
 </style>
 </head>
@@ -448,7 +496,7 @@ const T = {
   listenTap:'Listen, then tap the word you hear! 👂', findWord:'Find the word:',
   soundOut:'Tap a word. Sound it out, then read it! 📖',
   tapMagic:'Tap the magic e! ✨', thisSays:'This says:', magicE:'Magic e!',
-  sightIntro:'These are sight words. Tap each one! 👆', readWithMe:'Read it with me! 👀', popWordShow:'Pop the word you hear! 🫧', popWord:'Pop the word:',
+  sightIntro:'These are sight words. Tap each one! 👆', readWithMe:'Read it with me! 👀', popWordShow:'Pop the word you hear! 🔵', popWord:'Pop the word:',
   spellShow:'Listen and spell the word! 👂', spellWord:'Spell the word:',
   readSentence:'Read the sentence with me!', readSentenceShow:'Read the sentence with me! Tap a word for help. 💬',
   orderShow:'Put the words in order! 🧩', order:'Put the words in order.',
@@ -473,6 +521,9 @@ const P = {
 };
 
 /* ---------- small helpers ---------- */
+if (!Element.prototype.replaceChildren){ // iOS < 14
+  Element.prototype.replaceChildren = function(...nodes){ while (this.firstChild) this.removeChild(this.firstChild); this.append(...nodes); };
+}
 const $ = s => document.querySelector(s);
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
@@ -687,6 +738,7 @@ const Sfx = {
   tone(freq, dur, o = {}){
     if (!state.settings.sfx || !audioUnlocked) return;
     const c = this.ensure(); if (!c) return;
+    try {
     const t = c.currentTime + (o.when || 0);
     const osc = c.createOscillator(), g = c.createGain();
     osc.type = o.type || 'sine';
@@ -695,8 +747,9 @@ const Sfx = {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(o.vol || 0.18, t + 0.015);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(g).connect(c.destination);
+    osc.connect(g); g.connect(c.destination);
     osc.start(t); osc.stop(t + dur + 0.05);
+    } catch (e) {}
   },
   tap(){ this.tone(700, 0.06, {type:'triangle', vol:0.1}); },
   tick(k){ this.tone(520 + k * 90, 0.08, {type:'triangle', vol:0.1}); },
@@ -727,6 +780,53 @@ function burst(el){
     document.body.append(s);
     setTimeout(() => s.remove(), 900);
   }
+}
+// Run fn once Leo has finished talking (and at least minMs has passed), unless the child has left the screen.
+function afterSay(spoken, minMs, fn){
+  const id = navId;
+  Promise.all([spoken, wait(minMs)]).then(() => { if (id === navId) fn(); });
+}
+// Call fn when el changes size.
+function watchSize(el, fn){
+  if (window.ResizeObserver){ const ro = new ResizeObserver(fn); ro.observe(el); cleanups.push(() => ro.disconnect()); }
+  else { window.addEventListener('resize', fn); cleanups.push(() => window.removeEventListener('resize', fn)); }
+}
+// Finger or mouse strokes on a canvas. Only the first finger draws, so a resting palm or a second finger is ignored.
+function onStrokes(el, {down, move, up}){
+  const pos = e => { const r = el.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  if (window.PointerEvent){
+    let id = null;
+    el.addEventListener('pointerdown', e => {
+      if (id !== null || down(pos(e)) === false) return;
+      id = e.pointerId; e.preventDefault();
+      try { el.setPointerCapture(id); } catch (err) {}
+    });
+    el.addEventListener('pointermove', e => {
+      if (e.pointerId !== id) return;
+      const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+      for (const ev of (evs.length ? evs : [e])) move(pos(ev));
+    });
+    const stop = e => { if (e.pointerId !== id) return; id = null; up(); };
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointercancel', stop);
+    return;
+  }
+  // older iPads (iOS < 13) have touch events only
+  let tid = null, mouse = false;
+  const find = e => { for (let i = 0; i < e.changedTouches.length; i++) if (e.changedTouches[i].identifier === tid) return e.changedTouches[i]; return null; };
+  el.addEventListener('touchstart', e => {
+    const t = e.changedTouches[0];
+    if (tid !== null || down(pos(t)) === false) return;
+    tid = t.identifier; e.preventDefault();
+  }, {passive:false});
+  el.addEventListener('touchmove', e => { const t = find(e); if (t){ e.preventDefault(); move(pos(t)); } }, {passive:false});
+  const tend = e => { if (find(e)){ tid = null; up(); } };
+  el.addEventListener('touchend', tend);
+  el.addEventListener('touchcancel', tend);
+  el.addEventListener('mousedown', e => { if (down(pos(e)) !== false) mouse = true; });
+  const mm = e => { if (mouse) move(pos(e)); }, mu = () => { if (mouse){ mouse = false; up(); } };
+  window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu);
+  cleanups.push(() => { window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); });
 }
 function replayAnim(el, cls){
   el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
@@ -1052,8 +1152,8 @@ function actSounds(ctx){
         if (s === target){
           solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
           ctx.progress((r + 2) / total);
-          const pr = pick(PRAISE); say(pr, [pr, soundName(target)]);
-          later(() => round(r + 1), 1500);
+          const pr = pick(PRAISE);
+          afterSay(say(pr, [pr, soundName(target)]), 1200, () => round(r + 1));
         } else {
           misses++; Sfx.bad(); wiggle(b);
           say(pick(TRY), [P.thatIs(s), P.find(target)]);
@@ -1168,8 +1268,8 @@ function actTrace(ctx){
     won = true; Sfx.good(); wrap.classList.add('win'); burst(wrap); drawGuide(true);
     const text = items[i];
     ctx.progress((i + 1) / items.length);
-    const pr = pick(PRAISE); say(pr, [pr, text.length === 1 ? soundName(text) : text]);
-    later(() => { i++; if (i >= items.length){ ctx.done(); } else startItem(); }, 1600);
+    const pr = pick(PRAISE);
+    afterSay(say(pr, [pr, text.length === 1 ? soundName(text) : text]), 1300, () => { i++; if (i >= items.length) ctx.done(); else startItem(); });
   }
   function startItem(){
     won = false; fails = 0; wrap.classList.remove('win');
@@ -1183,30 +1283,19 @@ function actTrace(ctx){
     ctx.replay = prompt; prompt();
   }
 
-  const pt = e => { const r = ink.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
   function seg(a, b){
     hue = (hue + 3) % 360;
-    ictx.strokeStyle = `hsl(${hue} 85% 55%)`; ictx.lineWidth = brush; ictx.lineCap = 'round'; ictx.lineJoin = 'round';
+    ictx.strokeStyle = `hsl(${hue}, 85%, 55%)`; ictx.lineWidth = brush; ictx.lineCap = 'round'; ictx.lineJoin = 'round';
     ictx.beginPath(); ictx.moveTo(a.x, a.y); ictx.lineTo(b.x, b.y); ictx.stroke();
   }
-  ink.addEventListener('pointerdown', e => {
-    if (won || !ictx) return;
-    e.preventDefault(); try { ink.setPointerCapture(e.pointerId); } catch (err) {}
-    drawing = true; last = pt(e); seg(last, {x:last.x + 0.1, y:last.y});
+  onStrokes(ink, {
+    down: p => { if (won || !ictx) return false; drawing = true; last = p; seg(p, {x:p.x + 0.1, y:p.y}); },
+    move: p => { if (!drawing) return; seg(last, p); last = p; },
+    up: () => { if (!drawing) return; drawing = false; check(false); },
   });
-  ink.addEventListener('pointermove', e => {
-    if (!drawing) return;
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(last, p); last = p; }
-  });
-  const end = () => { if (!drawing) return; drawing = false; check(false); };
-  ink.addEventListener('pointerup', end);
-  ink.addEventListener('pointercancel', end);
-
-  const ro = new ResizeObserver(() => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); });
-  cleanups.push(() => ro.disconnect());
+  const resized = () => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); };
   const fontReady = document.fonts && document.fonts.load ? Promise.race([document.fonts.load(font(100)), wait(2500)]) : Promise.resolve();
-  fontReady.catch(() => {}).then(() => { if (!ctx.alive()) return; ro.observe(wrap); layout(); });
+  fontReady.catch(() => {}).then(() => { if (!ctx.alive()) return; watchSize(wrap, resized); layout(); });
   startItem();
 }
 
@@ -1256,8 +1345,8 @@ function wordQuiz(ctx, targets, doneSteps, total, onDone){
         if (w === target){
           solved = true; b.classList.add('right'); Sfx.good(); burst(b); pic.classList.add('show');
           ctx.progress((doneSteps + r + 1) / total);
-          const pr = pick(PRAISE); say(pr, [pr, target]);
-          later(() => round(r + 1), 1600);
+          const pr = pick(PRAISE);
+          afterSay(say(pr, [pr, target]), 1200, () => round(r + 1));
         } else {
           misses++; Sfx.bad(); wiggle(b);
           say(pick(TRY), [w, T.findWord, target]);
@@ -1326,7 +1415,7 @@ function actMagic(ctx){
         pic.textContent = PIC[long] || '✨';
         reveal(nextBtn);
         say(`${short} ➜ ${long}`, [short, long, P.magicMakes(long[firstVowel(long)])]);
-      }}, '🪄 magic e');
+      }}, '✨ magic e');
       const again = h('button', {class:'btn white', onclick:() => { Sfx.tap(); hear(); }}, '🔊');
       ctx.stage.replaceChildren(h('div', {class:'magic-box'}, pic, wordBox, h('div', {class:'row'}, again, wand)), nextBtn);
       ctx.replay = hear; hear();
@@ -1350,7 +1439,7 @@ function actSight(ctx){
   const order = roundList(words, 5, 8);
   const total = order.length + 1;
   const seen = new Set();
-  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🫧 Play ➜');
+  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🔵 Play ➜');
   const cards = words.map(w => {
     const card = h('button', {class:'word-card', onclick:() => {
       Sfx.tap(); bounce(card); card.classList.add('seen'); seen.add(w);
@@ -1380,8 +1469,8 @@ function actSight(ctx){
           if (w === target){
             solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
             ctx.progress((r + 2) / total);
-            const pr = pick(PRAISE); say(pr, [pr, target]);
-            later(() => round(r + 1), 1500);
+            const pr = pick(PRAISE);
+            afterSay(say(pr, [pr, target]), 1200, () => round(r + 1));
           } else {
             misses++; Sfx.bad(); wiggle(b);
             say(pick(TRY), [w, T.popWord, target]);
@@ -1428,8 +1517,8 @@ function actSpell(ctx){
           if (pos === chars.length){
             solved = true; Sfx.good(); burst(slotRow);
             ctx.progress((r + 1) / list.length);
-            const pr = pick(PRAISE); say(pr, [pr, ...chars.map(soundName), word]);
-            later(() => round(r + 1), 2600);
+            const pr = pick(PRAISE);
+            afterSay(say(pr, [pr, ...chars.map(soundName), word]), 1400, () => round(r + 1));
           }
         } else {
           misses++; Sfx.bad(); wiggle(t);
@@ -1573,25 +1662,16 @@ function actDraw(ctx){
     c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
     history.length = 0;
   }
-  const pt = e => { const r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
   function seg(a, b){
     c2d.strokeStyle = erasing ? '#fff' : color; c2d.lineWidth = erasing ? size * 2 : size;
     c2d.lineCap = 'round'; c2d.lineJoin = 'round';
     c2d.beginPath(); c2d.moveTo(a.x, a.y); c2d.lineTo(b.x, b.y); c2d.stroke();
   }
-  cv.addEventListener('pointerdown', e => {
-    if (!c2d) return;
-    e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch (err) {}
-    pushHistory(); drawing = true; last = pt(e); seg(last, {x:last.x + 0.1, y:last.y});
-    if (!erasing) hasInk = true;
+  onStrokes(cv, {
+    down: p => { if (!c2d) return false; pushHistory(); drawing = true; last = p; seg(p, {x:p.x + 0.1, y:p.y}); if (!erasing) hasInk = true; },
+    move: p => { if (!drawing) return; seg(last, p); last = p; },
+    up: () => { drawing = false; },
   });
-  cv.addEventListener('pointermove', e => {
-    if (!drawing) return;
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    for (const ev of (evs.length ? evs : [e])){ const p = pt(ev); seg(last, p); last = p; }
-  });
-  const end = () => { drawing = false; };
-  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
   function savePicture(){
     const out = document.createElement('canvas');
     out.width = cv.width; out.height = cv.height + Math.round(90 * dpr);
@@ -1608,9 +1688,8 @@ function actDraw(ctx){
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     }, 'image/png');
   }
-  const ro = new ResizeObserver(() => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); });
-  ro.observe(wrap);
-  cleanups.push(() => ro.disconnect());
+  watchSize(wrap, () => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); });
+  layout();
 }
 
 /* ---------- force refresh ---------- */
