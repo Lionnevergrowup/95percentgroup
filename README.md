@@ -38,7 +38,7 @@ This is a static site: `index.html`, plus the `fonts/` folder. There is no build
 
 1. Open the repository on GitHub → **Settings** → **Pages**.
 2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
-3. Pick the branch that holds these files (`main`, or `claude/kindergarten-interactive-game-mfzgb7`) and the **/ (root)** folder, then click **Save**.
+3. Pick the **main** branch and the **/ (root)** folder, then click **Save**.
 4. After about a minute the game is live at `https://lionnevergrowup.github.io/95percentgroup/`.
 
 To run it locally, open `index.html` in a browser, or run `python3 -m http.server` in this folder and visit http://localhost:8000.
