@@ -21,7 +21,8 @@ Each lesson has 7 short activities that follow the workbook page:
 | 💬 Sentence | 4. Read a sentence | Read along, then put the words back in order |
 | 🎨 Draw | 6. Draw and label | Draw a picture and label it with a lesson word; the picture can be saved |
 
-- A friendly lion (Leo) speaks every instruction out loud, so children don't need to read directions yet. Tap Leo to hear it again.
+- A friendly lion (Leo) speaks every instruction out loud, so children don't need to read directions yet. Tap Leo to hear it again, or drag him anywhere on the screen (he remembers where; "Put Leo back" in Settings returns him to the corner).
+- Cheerful background music plays quietly and dips whenever Leo talks. Turn it off with "🎵 Music" at the bottom of the home screen or in Settings.
 - Leo's voice is pre-recorded (`audio/`, 600+ short MP3 clips), so it works in any browser: in-app browsers such as WeChat, Android phones without an English speech engine, and iPhones with the silent switch on.
 - Children earn a ⭐ for each activity and an animal sticker 🏆 for each finished lesson.
 - **Parents page (👪)**: the Quick Parent Guide, voice speed, sound effects on/off, a sound test with tips if nothing plays, a "Refresh to latest version" button, a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons that ticks itself as the child plays and can be ticked by hand, and a "Reset progress" button (with a grown-up check).
@@ -57,6 +58,10 @@ python3 tools/build_audio.py kokoro-v1.0.onnx voices-v1.0.bin   # records new cl
 ```
 
 The model files come from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0). To re-record specific lines, add `--redo "phrase one" "phrase two"`; `--all` re-records everything. Any line without a clip falls back to the browser's built-in speech.
+
+## Background music
+
+`audio/music.mp3` is an original loop (marimba, ukulele-style chords, bass and shaker, about 38 s) synthesized by `tools/make_music.py`, so it has no licence restrictions. Re-create it with `python3 tools/make_music.py`.
 
 ## Credits
 

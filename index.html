@@ -306,7 +306,7 @@ table.prog td.l{text-align:left}
 table.prog td.l small{color:var(--ink-soft)}
 
 /* mascot */
-.mascot{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;z-index:30;pointer-events:none;max-width:calc(100% - 20px)}
+.mascot{transition-property:none!important;position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:8px;z-index:30;pointer-events:none;max-width:calc(100% - 20px)}
 .mascot .lion{font-size:clamp(52px,12vw,70px);line-height:1;pointer-events:auto;cursor:pointer;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 4px 3px rgba(0,0,0,.18));background:none;border:0;padding:0}
 .mascot.talking .lion{animation:talk .28s ease-in-out infinite alternate}
 .mascot .bubble{
@@ -315,6 +315,13 @@ table.prog td.l small{color:var(--ink-soft)}
 }
 .mascot .bubble.show{opacity:1;transform:none}
 .mascot .bubble::before{content:'';position:absolute;left:-10px;bottom:12px;border:10px solid transparent;border-right-color:#fff;border-left:0}
+.mascot .lion{touch-action:none;-webkit-user-drag:none}
+.mascot.dragging .lion{animation:none;transform:scale(1.18) rotate(-6deg);cursor:grabbing;filter:drop-shadow(0 10px 8px rgba(0,0,0,.25))}
+.mascot.flip{flex-direction:row-reverse}
+.mascot.flip .bubble::before{left:auto;right:-10px;border:10px solid transparent;border-left-color:#fff;border-right:0}
+.mascot.top{align-items:flex-start}
+.mascot.top .bubble{margin-bottom:0;margin-top:14px}
+.mascot.top .bubble::before{bottom:auto;top:12px}
 
 /* overlays */
 .overlay{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(43,34,80,.45);display:grid;place-items:center;z-index:50;padding:16px;animation:fade .2s;overflow-y:auto}
@@ -630,7 +637,7 @@ const state = (() => {
   if (!s || typeof s !== 'object') s = {};
   if (!s.done || typeof s.done !== 'object') s.done = {};
   if (!s.check || typeof s.check !== 'object') s.check = {};   // ticks a parent set by hand: {lesson: {Sounds: true, ...}}
-  s.settings = Object.assign({rate:0.85, sfx:true, voice:''}, s.settings || {});
+  s.settings = Object.assign({rate:0.85, sfx:true, music:true, leo:null}, s.settings || {});
   return s;
 })();
 function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
@@ -692,20 +699,23 @@ const Speech = {
     if (this.tts) try { speechSynthesis.cancel(); } catch (e) {}
     if (this.halt){ const f = this.halt; this.halt = null; f(); }
   },
-  stop(){ this.gen++; this.stopNow(); },
+  stop(){ this.gen++; this.stopNow(); Music.duck(false); },
   // parts: a phrase or a list of phrases, spoken one after another
   speak(parts, opts = {}){
     const gen = ++this.gen;
     this.stopNow();
     const list = (Array.isArray(parts) ? parts : [parts]).map(norm).filter(Boolean);
     if (window.__spoken && list.length && audioUnlocked) window.__spoken.push(list.join(' ')); // test hook
+    if (list.length && audioUnlocked) Music.duck(true);   // music goes quiet while Leo talks
     return (async () => {
-      for (let i = 0; i < list.length; i++){
-        if (gen !== this.gen || !audioUnlocked) return;
-        if (i) await wait(110);
-        if (gen !== this.gen) return;
-        await this.one(list[i], opts, gen);
-      }
+      try {
+        for (let i = 0; i < list.length; i++){
+          if (gen !== this.gen || !audioUnlocked) return;
+          if (i) await wait(110);
+          if (gen !== this.gen) return;
+          await this.one(list[i], opts, gen);
+        }
+      } finally { if (gen === this.gen) Music.duck(false); }
     })();
   },
   async one(phrase, opts, gen){
@@ -803,6 +813,56 @@ const Sfx = {
   win(){ [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.28, {type:'triangle', when:i * 0.1, vol:0.15})); },
 };
 
+/* ---------- background music: audio/music.mp3, an original loop made by tools/make_music.py ---------- */
+const Music = {
+  buf: null, src: null, master: null, loading: null, ducked: false, undock: null,
+  level(){ return this.ducked ? 0.04 : 0.13; },
+  load(){
+    const c = Sfx.ensure();
+    if (!c || this.buf) return null;
+    if (!this.loading) this.loading = fetch('audio/music.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+      .then(ab => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
+      .then(b => { this.buf = b; }).catch(() => {}).then(() => { this.loading = null; });
+    return this.loading;
+  },
+  start(){
+    if (!state.settings.music || !audioUnlocked || document.hidden || this.src) return;
+    const c = Sfx.ensure(); if (!c) return;
+    if (!this.buf){ const p = this.load(); if (p) p.then(() => { if (this.buf) this.start(); }); return; }
+    try {
+      if (!this.master){ this.master = c.createGain(); this.master.gain.value = this.level(); this.master.connect(c.destination); }
+      const g = c.createGain(), s = c.createBufferSource();
+      s.buffer = this.buf; s.loop = true; s.connect(g); g.connect(this.master);
+      g.gain.setValueAtTime(0, c.currentTime); g.gain.linearRampToValueAtTime(1, c.currentTime + 1.5);
+      s.start();
+      this.src = {s, g};
+    } catch (e) {}
+  },
+  stop(){
+    const cur = this.src, c = Sfx.ctx;
+    if (!cur || !c) return;
+    this.src = null;
+    try {
+      cur.g.gain.cancelScheduledValues(c.currentTime); cur.g.gain.setValueAtTime(cur.g.gain.value, c.currentTime);
+      cur.g.gain.linearRampToValueAtTime(0, c.currentTime + 0.4);
+      cur.s.stop(c.currentTime + 0.45);
+    } catch (e) {}
+  },
+  duck(on){
+    clearTimeout(this.undock);
+    if (on){ if (!this.ducked){ this.ducked = true; this.fade(0.15); } }
+    else if (this.ducked) this.undock = setTimeout(() => { this.ducked = false; this.fade(0.9); }, 350);
+  },
+  fade(secs){
+    const c = Sfx.ctx; if (!c || !this.master) return;
+    try { const g = this.master.gain, t = c.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(this.level(), t + secs); } catch (e) {}
+  },
+};
+function setMusic(on){
+  state.settings.music = on; saveState();
+  if (on) Music.start(); else Music.stop();
+}
+
 /* ---------- visual effects ---------- */
 function confetti(n = 50){
   const colors = ['#ff5fa2','#ffd23f','#22c07a','#3d8bfd','#7c5cff','#ff9f1c','#18b8c9'];
@@ -885,9 +945,75 @@ const bounce = el => replayAnim(el, 'bounce');
 /* ---------- mascot (Leo the lion) ---------- */
 let lastSay = null, sayCount = 0, bubbleTimer = null;
 const bubbleEl = h('div', {class:'bubble', 'aria-live':'polite'});
-const lionEl = h('button', {class:'lion', 'aria-label':'Hear it again', onclick:() => { if (lastSay) say(lastSay.text, lastSay.speech); }}, '🦁');
+let leoDragged = false;
+const lionEl = h('button', {class:'lion', 'aria-label':'Leo: tap to hear it again, drag to move him', onclick:() => {
+  if (leoDragged) return;   // that was a drag, not a tap
+  if (lastSay) say(lastSay.text, lastSay.speech);
+}}, '🦁');
 const mascotEl = h('aside', {class:'mascot', 'aria-label':'Leo the lion'}, lionEl, bubbleEl);
 document.body.append(mascotEl);
+
+// Put Leo at (x, y) = his top-left corner; his bubble opens towards the side with more room.
+let leoAt = null;   // where he was last put (measuring him mid-move can lag a frame behind)
+function placeLeo(x, y, save){
+  const lw = lionEl.offsetWidth || 64, lh = lionEl.offsetHeight || 64, vw = innerWidth, vh = innerHeight;
+  x = Math.max(4, Math.min(vw - lw - 4, x));
+  y = Math.max(4, Math.min(vh - lh - 4, y));
+  const right = x + lw / 2 > vw / 2, low = y + lh / 2 > vh / 2;
+  const st = mascotEl.style;
+  mascotEl.classList.add('moved');
+  mascotEl.classList.toggle('flip', right);
+  mascotEl.classList.toggle('top', !low);
+  if (right){ st.left = 'auto'; st.right = (vw - x - lw) + 'px'; } else { st.right = 'auto'; st.left = x + 'px'; }
+  if (low){ st.top = 'auto'; st.bottom = (vh - y - lh) + 'px'; } else { st.bottom = 'auto'; st.top = y + 'px'; }
+  leoAt = {x, y};
+  if (save){ state.settings.leo = {fx:(x + lw / 2) / vw, fy:(y + lh / 2) / vh}; saveState(); }
+}
+function restoreLeo(){
+  const p = state.settings.leo;
+  if (p && isFinite(p.fx) && isFinite(p.fy)) placeLeo(p.fx * innerWidth - (lionEl.offsetWidth || 64) / 2, p.fy * innerHeight - (lionEl.offsetHeight || 64) / 2, false);
+}
+function putLeoBack(){
+  state.settings.leo = null; saveState();
+  mascotEl.classList.remove('moved', 'flip', 'top');
+  ['left', 'right', 'top', 'bottom'].forEach(k => { mascotEl.style[k] = ''; });
+  bounce(lionEl);
+}
+(() => {
+  let drag = null;
+  const begin = (id, cx, cy) => { const r = lionEl.getBoundingClientRect(); drag = {id, cx, cy, x:r.left, y:r.top, moved:false}; };
+  const moveTo = (cx, cy) => {
+    if (!drag) return false;
+    const dx = cx - drag.cx, dy = cy - drag.cy;
+    if (!drag.moved && Math.hypot(dx, dy) < 8) return false;   // small wobble = still a tap
+    if (!drag.moved){ drag.moved = true; mascotEl.classList.add('dragging'); }
+    placeLeo(drag.x + dx, drag.y + dy, false);
+    return true;
+  };
+  const finish = () => {
+    if (!drag) return;
+    if (drag.moved){
+      leoDragged = true; setTimeout(() => { leoDragged = false; }, 60);
+      mascotEl.classList.remove('dragging');
+      if (leoAt) placeLeo(leoAt.x, leoAt.y, true);
+      Sfx.pop(); bounce(lionEl);
+    }
+    drag = null;
+  };
+  if (window.PointerEvent){
+    lionEl.addEventListener('pointerdown', e => { begin(e.pointerId, e.clientX, e.clientY); try { lionEl.setPointerCapture(e.pointerId); } catch (err) {} });
+    lionEl.addEventListener('pointermove', e => { if (drag && e.pointerId === drag.id && moveTo(e.clientX, e.clientY)) e.preventDefault(); });
+    lionEl.addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) finish(); });
+    lionEl.addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.id) finish(); });
+  } else {   // older iPads
+    lionEl.addEventListener('touchstart', e => { const t = e.changedTouches[0]; begin(t.identifier, t.clientX, t.clientY); }, {passive:true});
+    lionEl.addEventListener('touchmove', e => { const t = e.changedTouches[0]; if (moveTo(t.clientX, t.clientY)) e.preventDefault(); }, {passive:false});
+    lionEl.addEventListener('touchend', finish);
+    lionEl.addEventListener('touchcancel', finish);
+  }
+  window.addEventListener('resize', restoreLeo);
+  restoreLeo();
+})();
 // text = what the bubble shows, speech = what Leo says (so answers are never shown as text)
 function say(text, speech){
   lastSay = {text, speech};
@@ -996,11 +1122,21 @@ function showHome(quiet){
       h('div', {class:'lesson-grid'}, LESSONS.slice(a - 1, b).map(l => lessonBtn(l, l === next))),
     ]),
     h('div', {class:'row', style:{marginTop:'28px'}},
-      h('button', {class:'btn white', onclick:() => { Sfx.tap(); go('#/start'); }}, '🏁 Start screen'))
+      h('button', {class:'btn white', onclick:() => { Sfx.tap(); go('#/start'); }}, '🏁 Start screen'),
+      musicButton())
   );
   if (quiet) return;
   const line = next && next.n > 1 ? P.playLesson(next.n) : T.pickLesson;
   say(line + ' 👆', line);
+}
+
+function musicButton(){
+  const label = () => state.settings.music ? '🎵 Music: On' : '🔇 Music: Off';
+  const b = h('button', {class:'btn white', 'aria-pressed':String(!!state.settings.music), onclick:() => {
+    Sfx.tap(); setMusic(!state.settings.music);
+    b.textContent = label(); b.setAttribute('aria-pressed', String(!!state.settings.music));
+  }}, label());
+  return b;
 }
 
 // The first screen ("Phonics Fun! ▶ Play"). Shown when the game opens, and at #/start.
@@ -1012,7 +1148,7 @@ function showStart(){
     h('p', {}, 'Kindergarten phonics · 25 lessons'),
     h('p', {style:{fontSize:'1.05rem', margin:'-8px 0 16px'}}, '🔊 Turn the sound on!'),
     h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
-      audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win();
+      audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win(); Music.start();
       closeOverlay();
       Speech.preload([...Object.values(T), ...PRAISE, ...TRY]);
       // from the start screen, Play leads to the home screen
@@ -1178,6 +1314,10 @@ function showParents(){
         seg('Voice speed', [['🐢 Slow', 0.7], ['🙂 Normal', 0.85], ['🐇 Fast', 1]], state.settings.rate, v => { state.settings.rate = v; saveState(); Speech.speak(T.readingVoice); })),
       h('div', {class:'setting'}, h('label', {}, 'Sound effects'),
         seg('Sound effects', [['🔔 On', true], ['🔕 Off', false]], state.settings.sfx, v => { state.settings.sfx = v; saveState(); Sfx.good(); })),
+      h('div', {class:'setting'}, h('label', {}, 'Background music'),
+        seg('Background music', [['🎵 On', true], ['🔇 Off', false]], state.settings.music, v => setMusic(v))),
+      h('div', {class:'setting'}, h('label', {}, 'Leo the lion'),
+        h('button', {class:'btn white', onclick:() => { Sfx.tap(); putLeoBack(); }}, '🦁 Put Leo back in the corner')),
       h('div', {class:'setting'}, h('label', {}, 'Sound test'),
         h('button', {class:'btn blue', onclick:() => { Sfx.good(); Speech.speak(T.readingVoice); }}, '🔊 Test sound')),
       h('p', {class:'note'}, 'No sound? Turn the volume up. If the page is open inside an app such as WeChat, open it in the phone’s browser instead (tap “…” → “Open in browser”). If Bluetooth headphones or a speaker are connected, the sound plays there.'),
@@ -1890,11 +2030,13 @@ const activateAudio = () => {
     audioUnlocked = true; Speech.unlock(); Sfx.ensure();
     Speech.preload([...Object.values(T), ...PRAISE, ...TRY]);
   } else if (Speech.blocked){ Speech.blocked = false; Speech.unlock(); Sfx.ensure(); }
+  else Sfx.ensure();   // resumes the audio if the phone paused it
+  Music.start();       // no-op when it is already playing or switched off
 };
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, activateAudio, true));
 if (/[?&]v=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
 window.addEventListener('hashchange', route);
-document.addEventListener('visibilitychange', () => { if (document.hidden) Speech.stop(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden){ Speech.stop(); Music.stop(); } else Music.start(); });
 route();
 if (!/^#\/(parents|start)/.test(location.hash)) showStart();   // #/start shows it via route()
 })();
