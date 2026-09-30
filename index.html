@@ -244,6 +244,7 @@ button{font-family:inherit;color:inherit}
 /* tracing */
 .trace-top{display:flex;align-items:center;gap:12px;font-family:var(--font-read);font-weight:700;font-size:clamp(1.3rem,4vw,1.8rem)}
 .trace-top .tp{font-size:clamp(2.2rem,7vw,3rem)}
+.trace-top .count{margin-left:6px;font-family:var(--font-ui);font-size:1.05rem;background:#fff;border-radius:999px;padding:.15em .7em;box-shadow:0 3px 0 var(--line);color:var(--ink-soft)}
 .trace-wrap{position:relative;width:min(100%,760px);height:clamp(230px,50vh,520px);background:#fff;border-radius:30px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
 .trace-wrap canvas{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;touch-action:none}
 .trace-wrap.win{box-shadow:0 8px 0 #7fdcaa,0 0 0 6px #b8f5d4}
@@ -261,9 +262,11 @@ button{font-family:inherit;color:inherit}
 .stage.compact{gap:14px;justify-content:flex-start}
 .draw-wrap{position:relative;width:min(100%,820px);height:clamp(210px,44vh,470px);background:#fff;border-radius:26px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
 .draw-wrap canvas{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
-.draw-label{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);pointer-events:none;white-space:nowrap;
-  font-family:var(--font-read);font-weight:700;font-size:clamp(1.5rem,4.6vw,2.2rem);color:var(--purple);background:rgba(255,255,255,.85);border-radius:14px;padding:0 .4em}
-.draw-label:empty{display:none}
+.draw-label{position:absolute;left:50%;top:85%;transform:translate(-50%,-50%);white-space:nowrap;border:0;margin:0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+  font-family:var(--font-read);font-weight:700;font-size:clamp(1.5rem,4.6vw,2.2rem);line-height:1.35;color:var(--purple);background:rgba(255,255,255,.85);border-radius:14px;padding:0 .4em}
+.draw-label[hidden]{display:none}
+.draw-label.dragging{cursor:grabbing;box-shadow:0 6px 14px rgba(0,0,0,.18)}
+.draw-label .x{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;background:var(--purple);color:#fff;font:700 12px/22px var(--font-ui);text-align:center}
 .word-bank{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .word-bank .wchip{font-family:var(--font-read);font-size:clamp(1.3rem,4vw,1.8rem);font-weight:700}
 .word-bank .wchip.on{background:#e9e4ff;box-shadow:0 5px 0 var(--purple)}
@@ -430,7 +433,11 @@ table.prog td.l small{color:var(--ink-soft)}
 <body>
 <main id="app"></main>
 <noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
-<script>document.write('<script src="audio/manifest.js' + (/[?&]v=\d+/.test(location.search) ? '?' + location.search.match(/v=\d+/)[0] : '') + '"><\/script>');</script>
+<script>
+// Versions of the audio files, filled in by tools/stamp.py, so a page never uses an older clip list.
+var AUDIO_VERSION = {manifest:'312b81193a', music:'7264c3b77d'};
+document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
+</script>
 <script>
 (() => {
 'use strict';
@@ -541,6 +548,7 @@ const T = {
   popBalloon:'Pop the balloon with the sound you hear! 🎈',
   traceLetter:'Trace the letter with your finger! ✏️', traceWord:'Trace the word with your finger! ✏️',
   traceThis:'Trace this letter!', traceTheWord:'Trace the word:',
+  traceLittle:'Trace the little letter!', traceLittleShow:'Trace the little letter! ✏️', traceBig:'Now trace the big letter!', traceBigShow:'Now trace the big letter! ✏️',
   useFinger:'Use your finger to trace the letter! ☝️', stayOn:'Stay on the gray letter! 🙂', keepGoing:'Keep going! Cover all of the gray letter. 🖍️',
   listenTap:'Listen, then tap the word you hear! 👂', findWord:'Find the word:',
   soundOut:'Tap a word. Sound it out, then read it! 📖',
@@ -711,7 +719,7 @@ const Speech = {
       try {
         for (let i = 0; i < list.length; i++){
           if (gen !== this.gen || !audioUnlocked) return;
-          if (i) await wait(110);
+          if (i) await wait(170);
           if (gen !== this.gen) return;
           await this.one(list[i], opts, gen);
         }
@@ -725,7 +733,7 @@ const Speech = {
     if (!url && window.__clipMiss) window.__clipMiss.push(phrase);
     await this.say(phrase, opts, gen);
   },
-  rate: opts => Math.max(0.6, Math.min(1.5, (opts.rate || 1) * state.settings.rate / 0.85)),
+  rate: opts => Math.max(0.6, Math.min(1.5, (opts.rate || 1) * state.settings.rate / 0.95)),   // Normal = 0.9x
   clip(url, opts, gen){
     return new Promise(resolve => {
       const a = this.audio;
@@ -735,14 +743,15 @@ const Speech = {
       if (gen !== this.gen){ resolve(true); return; }
       this.halt = stopFn;
       a.onended = () => end(true);
-      a.onerror = () => end(false);
+      a.onerror = () => { this.last = 'error'; end(false); };
+      a.onplaying = () => { this.last = 'ok'; };
       try {
         a.src = url;
         const r = this.rate(opts);
         a.defaultPlaybackRate = r; a.playbackRate = r;
         const pr = a.play();
         // iOS can refuse audio again after a call or time in the background; the next tap unlocks it
-        if (pr && pr.catch) pr.catch(err => { if (err && err.name === 'NotAllowedError') this.blocked = true; end(false); });
+        if (pr && pr.catch) pr.catch(err => { if (err && err.name === 'NotAllowedError'){ this.blocked = true; this.last = 'blocked'; } end(false); });
       } catch (e) { end(false); return; }
       timer = setTimeout(() => end(true), 15000);
     });
@@ -820,7 +829,7 @@ const Music = {
   load(){
     const c = Sfx.ensure();
     if (!c || this.buf) return null;
-    if (!this.loading) this.loading = fetch('audio/music.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+    if (!this.loading) this.loading = fetch('audio/music.mp3?v=' + AUDIO_VERSION.music).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
       .then(ab => new Promise((res, rej) => c.decodeAudioData(ab, res, rej)))
       .then(b => { this.buf = b; }).catch(() => {}).then(() => { this.loading = null; });
     return this.loading;
@@ -896,9 +905,10 @@ function watchSize(el, fn){
   else { window.addEventListener('resize', fn); cleanups.push(() => window.removeEventListener('resize', fn)); }
 }
 // Finger or mouse strokes on a canvas. Only the first finger draws, so a resting palm or a second finger is ignored.
-function onStrokes(el, {down, move, up}){
+// positions are relative to `rel` (the element itself unless given)
+function onStrokes(el, {down, move, up}, rel = el){
   el.addEventListener('contextmenu', e => e.preventDefault());
-  const pos = e => { const r = el.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  const pos = e => { const r = rel.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
   if (window.PointerEvent){
     let id = null;
     el.addEventListener('pointerdown', e => {
@@ -1269,7 +1279,27 @@ function showStickers(){
   say(count ? P.haveStickers(count) + ' 🎉' : T.finishALesson, count ? P.haveStickers(count) : T.finishALesson);
 }
 
+const soundStatus = h('span', {class:'note', role:'status'});
+// Play a test line and report what happened, so a parent can tell why there is no sound.
+function soundCheck(){
+  Sfx.good();
+  soundStatus.textContent = 'Checking…';
+  Speech.last = null;
+  const clips = Object.keys(CLIPS).length;
+  Speech.speak(T.readingVoice);
+  setTimeout(() => {
+    const r = Speech.last;
+    soundStatus.textContent =
+      !clips ? '⚠️ The voice files did not load. Tap 🔄 Refresh (top right of the home screen).'
+      : r === 'ok' ? '✅ Leo\'s voice is playing. If you hear nothing, turn the volume up or check that no Bluetooth speaker or headphones are connected.'
+      : r === 'blocked' ? '⚠️ The browser is blocking sound. Tap anywhere on the page, then try again.'
+      : r === 'error' ? '⚠️ A voice file could not load. Check the internet connection, then tap 🔄 Refresh.'
+      : '⚠️ No sound started. If this page is open inside another app (such as WeChat), open it in the phone\'s browser.';
+  }, 2200);
+}
+
 function showParents(){
+  soundStatus.textContent = '';
   const seg = (name, options, cur, onPick) => {
     const wrap = h('div', {class:'seg', role:'radiogroup', 'aria-label':name});
     options.forEach(([label, val]) => wrap.append(h('button', {class:val === cur ? 'on' : null, role:'radio', 'aria-checked':String(val === cur), onclick:e => {
@@ -1319,7 +1349,7 @@ function showParents(){
       h('div', {class:'setting'}, h('label', {}, 'Leo the lion'),
         h('button', {class:'btn white', onclick:() => { Sfx.tap(); putLeoBack(); }}, '🦁 Put Leo back in the corner')),
       h('div', {class:'setting'}, h('label', {}, 'Sound test'),
-        h('button', {class:'btn blue', onclick:() => { Sfx.good(); Speech.speak(T.readingVoice); }}, '🔊 Test sound')),
+        h('button', {class:'btn blue', onclick:() => soundCheck()}, '🔊 Test sound'), soundStatus),
       h('p', {class:'note'}, 'No sound? Turn the volume up. If the page is open inside an app such as WeChat, open it in the phone’s browser instead (tap “…” → “Open in browser”). If Bluetooth headphones or a speaker are connected, the sound plays there.'),
       h('div', {class:'setting'}, h('label', {}, 'Update'),
         h('button', {class:'btn teal', onclick:() => forceRefresh()}, '🔄 Refresh to latest version'))),
@@ -1431,10 +1461,11 @@ function actSounds(ctx){
 }
 
 // 2 · Trace: trace letters (or silent-e words) with a finger
+// Letters are traced little then big (t, T); review lessons trace up to six little letters; silent-e lessons trace words.
 function traceItems(l){
   if (l.pairs) return l.pairs.map(p => p[1]).concat(l.words || []).slice(0, 5);
-  const s = l.sounds.length > 5 ? shuffle(l.sounds).slice(0, 5) : l.sounds;
-  return s.length <= 3 ? [...s, ...s] : s;
+  if (l.sounds.length <= 3) return l.sounds.flatMap(x => [x, x.toUpperCase()]);
+  return shuffle(l.sounds).slice(0, 6);
 }
 function actTrace(ctx){
   const l = ctx.lesson, items = traceItems(l);
@@ -1442,12 +1473,12 @@ function actTrace(ctx){
   const wrap = h('div', {class:'trace-wrap'});
   const guide = h('canvas', {'aria-hidden':'true'}), ink = h('canvas', {'aria-label':'Tracing area'});
   wrap.append(guide, ink);
-  const topPic = h('span', {class:'tp'}), topLabel = h('span');
+  const topPic = h('span', {class:'tp'}), topLabel = h('span'), counter = h('span', {class:'count'});
   const clearBtn = h('button', {class:'btn orange', onclick:() => { Sfx.tap(); clearInk(); }}, '🧽 Clear');
   const doneBtn = h('button', {class:'btn green', onclick:() => check(true)}, '✔ Done');
-  ctx.stage.replaceChildren(h('div', {class:'trace-top'}, topPic, topLabel), wrap, h('div', {class:'row'}, clearBtn, doneBtn));
+  ctx.stage.replaceChildren(h('div', {class:'trace-top'}, topPic, topLabel, counter), wrap, h('div', {class:'row'}, clearBtn, doneBtn));
 
-  let W = 0, H = 0, dpr = 1, gctx, ictx, brush = 20, size = 100, mask = [], tol = null, mw = 0, mh = 0;
+  let W = 0, H = 0, dpr = 1, gctx, ictx, brush = 20, size = 100, mask = [], tol = null, mw = 0, mh = 0, cellOf = null, cells = [];
   const small = document.createElement('canvas');
   const font = px => `700 ${px}px Andika, 'Comic Sans MS', 'Chalkboard SE', sans-serif`;
 
@@ -1497,11 +1528,24 @@ function actTrace(ctx){
     m.font = font(size); m.textAlign = 'center'; m.textBaseline = 'alphabetic'; m.fillStyle = '#000';
     m.fillText(text, cx, base);
     const md = m.getImageData(0, 0, mw, mh).data;
-    m.lineJoin = 'round'; m.lineWidth = brush * 1.6 + size * 0.04; m.strokeStyle = '#000';
+    m.lineJoin = 'round'; m.lineWidth = brush + size * 0.03; m.strokeStyle = '#000';   // how far off the letter still counts
     m.strokeText(text, cx, base);
     const td = m.getImageData(0, 0, mw, mh).data;
     mask = []; tol = new Uint8Array(mw * mh);
     for (let p = 0; p < mw * mh; p++){ if (md[p * 4 + 3] > 128) mask.push(p); if (td[p * 4 + 3] > 30) tol[p] = 1; }
+    // split the letter into small parts, so every part has to be traced (not just half of it)
+    let x0 = mw, x1 = 0, y0 = mh, y1 = 0;
+    for (const p of mask){ const x = p % mw, y = (p / mw) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const cellPx = Math.max(4, brush * 0.75);   // in mask pixels (half size), about 1.5 brush widths
+    const cols = Math.max(1, Math.ceil((x1 - x0 + 1) / cellPx)), rows = Math.max(1, Math.ceil((y1 - y0 + 1) / cellPx));
+    cellOf = new Int32Array(mask.length);
+    const counts = new Array(cols * rows).fill(0);
+    mask.forEach((p, k) => {
+      const cx = Math.min(cols - 1, Math.floor((p % mw - x0) / cellPx)), cy = Math.min(rows - 1, Math.floor((Math.floor(p / mw) - y0) / cellPx));
+      cellOf[k] = cx + cols * cy; counts[cellOf[k]]++;
+    });
+    const minPx = cellPx * cellPx * 0.08;   // ignore cells that only touch the letter's edge
+    cells = counts.map(n => n >= minPx ? n : 0);
     small.width = mw; small.height = mh;
   }
   function hline(y){ gctx.beginPath(); gctx.moveTo(16, y); gctx.lineTo(W - 16, y); gctx.stroke(); }
@@ -1511,20 +1555,32 @@ function actTrace(ctx){
     sc.clearRect(0, 0, mw, mh); sc.drawImage(ink, 0, 0, mw, mh);
     const d = sc.getImageData(0, 0, mw, mh).data;
     let cov = 0, inkN = 0, out = 0;
-    for (const p of mask) if (d[p * 4 + 3] > 30) cov++;
+    const hit = new Array(cells.length).fill(0);
+    mask.forEach((p, k) => { if (d[p * 4 + 3] > 30){ cov++; hit[cellOf[k]]++; } });
     for (let p = 0; p < mw * mh; p++) if (d[p * 4 + 3] > 30){ inkN++; if (!tol[p]) out++; }
-    return {coverage: mask.length ? cov / mask.length : 0, outside: inkN ? out / inkN : 0, inkN};
+    // parts: share of the letter's parts that are at least a third covered
+    let partsN = 0, partsHit = 0;
+    cells.forEach((n, c) => { if (n){ partsN++; if (hit[c] >= n / 3) partsHit++; } });
+    // spread: how much ink there is compared with the letter itself (scribbling makes it large)
+    return {coverage: mask.length ? cov / mask.length : 0, outside: inkN ? out / inkN : 0, inkN,
+      spread: mask.length ? inkN / mask.length : 0, parts: partsN ? partsHit / partsN : 0};
   }
+  // Only a real trace passes: most of the letter covered, little ink off it, and no scribbling.
+  // After two tries that were not quite enough, it is a little kinder, but never lets a scribble through.
   function check(pressed){
     if (won || !mask.length) return;
-    const {coverage, outside, inkN} = measure();
-    const relaxed = fails >= 2;
-    const pass = relaxed ? coverage >= 0.42 && outside <= 0.55 : coverage >= 0.6 && outside <= 0.4;
-    if (pass || (pressed && fails >= 4 && inkN > 0)){ success(); return; }
+    const {coverage, outside, inkN, spread, parts} = measure();
+    if (window.__traceStats) window.__traceStats.push({coverage, outside, spread, parts});   // test hook
+    // messy: ink off the letter, or far more ink than letter (thin letters like j coloured in carefully reach about 2)
+    const kind = fails >= 2;
+    const messy = kind ? outside > 0.25 || spread > 2.6 || (spread > 2 && outside > 0.1)
+                       : outside > 0.2 || spread > 2.4 || (spread > 1.8 && outside > 0.08);
+    const pass = !messy && (kind ? coverage >= 0.5 && parts >= 0.72 : coverage >= 0.6 && parts >= 0.8);
+    if (pass){ success(); return; }
     if (!pressed) return;
     fails++; Sfx.bad(); wiggle(wrap);
     if (inkN === 0) say(T.useFinger);
-    else if (outside > 0.4) say(T.stayOn);
+    else if (messy){ say(T.stayOn); clearInk(); }   // start that one again
     else say(T.keepGoing);
   }
   function success(){
@@ -1532,17 +1588,22 @@ function actTrace(ctx){
     const text = items[i];
     ctx.progress((i + 1) / items.length);
     const pr = pick(PRAISE);
-    afterSay(say(pr, [pr, text.length === 1 ? soundName(text) : text]), 1300, () => { i++; if (i >= items.length) ctx.done(); else startItem(); });
+    afterSay(say(pr, [pr, text.length === 1 ? soundName(text.toLowerCase()) : text]), 1300, () => { i++; if (i >= items.length) ctx.done(); else startItem(); });
   }
   function startItem(){
     won = false; fails = 0; wrap.classList.remove('win');
     const text = items[i];
-    const isLetter = text.length === 1;
-    topPic.textContent = isLetter ? SOUND[text][1] : (PIC[text] || '✨');
-    topLabel.textContent = isLetter ? `${text}  ·  ${SOUND[text][0]}` : text;
+    const isLetter = text.length === 1, key = text.toLowerCase(), big = isLetter && text !== key;
+    topPic.textContent = isLetter ? SOUND[key][1] : (PIC[text] || '✨');
+    topLabel.textContent = isLetter ? `${text}  ·  ${SOUND[key][0]}` : text;
+    counter.textContent = `${i + 1} / ${items.length}`;
     clearInk(); if (W) drawGuide();
     ctx.progress(i / items.length);
-    const prompt = () => say(isLetter ? T.traceLetter : T.traceWord, isLetter ? [T.traceThis, soundSay(text)] : [T.traceTheWord, text]);
+    const pairs = items.some(x => x.length === 1 && x !== x.toLowerCase());   // little and big letters
+    const prompt = () => !isLetter ? say(T.traceWord, [T.traceTheWord, text])
+      : big ? say(T.traceBigShow, [T.traceBig, soundSay(key)])
+      : pairs ? say(T.traceLittleShow, [T.traceLittle, soundSay(key)])
+      : say(T.traceLetter, [T.traceThis, soundSay(key)]);
     ctx.replay = prompt; prompt();
   }
 
@@ -1879,7 +1940,11 @@ function actDraw(ctx){
   const wrap = h('div', {class:'draw-wrap'});
   const cv = h('canvas', {'aria-label':'Drawing area'});
   wrap.append(cv);
-  const labelEl = h('div', {class:'draw-label'}, '');
+  // the word label sits on the picture: drag it to move it, tap it to take it off
+  const labelText = h('span', {}), labelEl = h('button', {class:'draw-label', hidden:true, title:'Drag to move. Tap to take off.',
+    onclick:e => { if (e.detail === 0){ Sfx.tap(); setLabel(''); } }},   // keyboard; taps are handled below
+    labelText, h('span', {class:'x', 'aria-hidden':'true'}, '✕'));
+  let lpos = null;   // label centre as a share of the picture's width and height; null = bottom middle
   const pick1 = (list, el) => list.forEach(x => { x.classList.toggle('on', x === el); x.setAttribute('aria-pressed', String(x === el)); });
   const swatches = DRAW_COLORS.map(([name, c, light]) => h('button', {class:'swatch' + (light ? ' light' : '') + (c === color ? ' on' : ''), style:{background:c},
     'aria-label':name, title:name, 'aria-pressed':String(c === color), onclick:e => {
@@ -1896,11 +1961,11 @@ function actDraw(ctx){
   // undo brings back the picture, whether it had ink, and its word
   const undoBtn = h('button', {class:'tool', 'aria-label':'undo', title:'undo', onclick:() => {
     Sfx.tap(); const snap = history.pop();
-    if (snap){ c2d.putImageData(snap.img, 0, 0); hasInk = snap.ink; setLabel(snap.label); }
+    if (snap){ c2d.putImageData(snap.img, 0, 0); hasInk = snap.ink; setLabel(snap.label, snap.lpos); }
   }}, '↩️');
   // clear removes the drawing and its word
   const clearBtn = h('button', {class:'tool', 'aria-label':'clear picture', title:'clear picture', onclick:() => {
-    Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; setLabel('');
+    Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; setLabel('', null);
   }}, '🗑️');
   // tap a word to label the picture; tap it again to take the label off
   const bank = h('div', {class:'word-bank', role:'group', 'aria-label':'Pick a word for your picture'}, words.map(w => h('button', {class:'wchip', 'aria-pressed':'false', onclick:() => {
@@ -1908,11 +1973,47 @@ function actDraw(ctx){
     if (label === w){ setLabel(''); return; }
     setLabel(w); Speech.speak(w);
   }}, w)));
-  function setLabel(w){
+  function setLabel(w, pos){
     label = w || '';
-    labelEl.textContent = label ? (PIC[label] ? PIC[label] + ' ' : '') + label : '';
+    if (pos !== undefined) lpos = pos;
+    labelText.textContent = label ? (PIC[label] ? PIC[label] + ' ' : '') + label : '';
+    labelEl.hidden = !label;
+    labelEl.setAttribute('aria-label', label ? `Label: ${label}. Tap to take it off.` : 'Label');
     [...bank.children].forEach(c => { const on = c.textContent === label; c.classList.toggle('on', on); c.setAttribute('aria-pressed', String(on)); });
+    placeLabel();
   }
+  // keep the whole label inside the picture
+  function placeLabel(){
+    if (!label) return;
+    const r = wrap.getBoundingClientRect(), lw = labelEl.offsetWidth, lh = labelEl.offsetHeight;
+    if (!r.width || !r.height) return;
+    let x = lpos ? lpos.fx * r.width : r.width / 2, y = lpos ? lpos.fy * r.height : r.height - 8 - lh / 2;
+    // room for the ✕ badge at the top right
+    x = lw + 14 >= r.width ? r.width / 2 : Math.max(lw / 2 + 4, Math.min(r.width - lw / 2 - 10, x));
+    y = lh + 14 >= r.height ? r.height / 2 : Math.max(lh / 2 + 10, Math.min(r.height - lh / 2 - 4, y));
+    labelEl.style.left = x + 'px'; labelEl.style.top = y + 'px';
+    return {x, y};
+  }
+  let drag = null;
+  onStrokes(labelEl, {
+    down: p => { const c = placeLabel(); if (!c) return false; drag = {p, c, moved:false}; },
+    move: p => {
+      if (!drag) return;
+      const dx = p.x - drag.p.x, dy = p.y - drag.p.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 8) return;   // a small wobble is still a tap
+      if (!drag.moved){ drag.moved = true; labelEl.classList.add('dragging'); }
+      const r = wrap.getBoundingClientRect();
+      lpos = {fx:(drag.c.x + dx) / r.width, fy:(drag.c.y + dy) / r.height};
+      const c = placeLabel();
+      lpos = {fx:c.x / r.width, fy:c.y / r.height};
+    },
+    up: () => {
+      if (!drag) return;
+      const moved = drag.moved; drag = null; labelEl.classList.remove('dragging');
+      Sfx.tap();
+      if (!moved) setLabel('');
+    },
+  }, wrap);
   const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', title:'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
   const doneBtn = h('button', {class:'btn green big', onclick:() => {
     if (!hasInk){ Sfx.bad(); wiggle(wrap); say(T.drawFirst); return; }
@@ -1930,7 +2031,7 @@ function actDraw(ctx){
 
   let c2d = null, W = 0, H = 0, dpr = 1;
   function paintWhite(){ c2d.save(); c2d.setTransform(1, 0, 0, 1, 0, 0); c2d.fillStyle = '#fff'; c2d.fillRect(0, 0, cv.width, cv.height); c2d.restore(); }
-  function pushHistory(){ try { history.push({img:c2d.getImageData(0, 0, cv.width, cv.height), ink:hasInk, label}); if (history.length > 8) history.shift(); } catch (e) {} }
+  function pushHistory(){ try { history.push({img:c2d.getImageData(0, 0, cv.width, cv.height), ink:hasInk, label, lpos}); if (history.length > 8) history.shift(); } catch (e) {} }
   function layout(){
     const r = wrap.getBoundingClientRect();
     if (!r.width || !r.height) return;
@@ -1943,6 +2044,7 @@ function actDraw(ctx){
     if (old) c2d.drawImage(old, 0, 0, cv.width, cv.height);
     c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
     history.length = 0;
+    placeLabel();
   }
   function seg(a, b){
     c2d.strokeStyle = erasing ? '#fff' : color; c2d.lineWidth = erasing ? size * 2 : size;
@@ -1954,17 +2056,27 @@ function actDraw(ctx){
     move: p => { if (!drawing) return; seg(last, p); last = p; },
     up: () => { drawing = false; },
   });
+  function roundRect(o, x, y, w, ht, r){
+    o.beginPath(); o.moveTo(x + r, y);
+    o.arcTo(x + w, y, x + w, y + ht, r); o.arcTo(x + w, y + ht, x, y + ht, r);
+    o.arcTo(x, y + ht, x, y, r); o.arcTo(x, y, x + w, y, r); o.closePath();
+  }
   function savePicture(){
-    // the word goes in a strip under the picture; no word, no strip
+    // the word label is saved where it sits on the picture
     const out = document.createElement('canvas');
-    out.width = cv.width; out.height = cv.height + (label ? Math.round(90 * dpr) : 0);
+    out.width = cv.width; out.height = cv.height;
     const o = out.getContext('2d');
     o.fillStyle = '#fff'; o.fillRect(0, 0, out.width, out.height);
     o.drawImage(cv, 0, 0);
-    if (label){
+    const c = placeLabel();
+    if (c){
+      const r = wrap.getBoundingClientRect(), sx = cv.width / r.width, sy = cv.height / r.height;
+      const lw = labelEl.offsetWidth * sx, lh = labelEl.offsetHeight * sy, x = c.x * sx, y = c.y * sy;
+      o.fillStyle = 'rgba(255,255,255,.85)'; roundRect(o, x - lw / 2, y - lh / 2, lw, lh, 14 * sy); o.fill();
+      const fs = parseFloat(getComputedStyle(labelText).fontSize) || 32;
       o.fillStyle = '#6c4cf0'; o.textAlign = 'center'; o.textBaseline = 'middle';
-      o.font = `700 ${Math.round(44 * dpr)}px Andika, 'Comic Sans MS', sans-serif`;
-      o.fillText(label, out.width / 2, cv.height + 45 * dpr);
+      o.font = `700 ${Math.round(fs * sy)}px Andika, 'Comic Sans MS', sans-serif`;
+      o.fillText(labelText.textContent, x, y);
     }
     out.toBlob(blob => {
       if (!blob) return;

@@ -140,6 +140,8 @@ def main():
     with open(out, 'wb') as f:
         f.write(mp3)
     print(f'{out}: {len(pcm) / RATE:.1f} s, {len(mp3) // 1024} KB')
+    import stamp
+    stamp.main()
 
 
 if __name__ == '__main__':

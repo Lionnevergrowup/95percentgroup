@@ -17,6 +17,8 @@ window.PHONICS_CLIPS = {
 "Trace the word with your finger!": "fcc9672a6e34.mp3",
 "Trace this letter!": "26d223e4a01d.mp3",
 "Trace the word:": "ad57a80be8e6.mp3",
+"Trace the little letter!": "4b1ccabb1041.mp3",
+"Now trace the big letter!": "ebd423324b80.mp3",
 "Use your finger to trace the letter!": "0ef0f2cd7e95.mp3",
 "Stay on the gray letter!": "01a9049b1b0a.mp3",
 "Keep going! Cover all of the gray letter.": "7d26b159e7d6.mp3",

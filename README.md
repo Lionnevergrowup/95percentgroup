@@ -14,12 +14,12 @@ Each lesson has 7 short activities that follow the workbook page:
 | Activity | Workbook section | What the child does |
 |---|---|---|
 | 🔤 Sounds | 1. Say the sounds | Tap the letter cards to hear them, then pop the balloon with the sound Leo says |
-| ✏️ Trace | Write each sound | Trace the letter (or the silent-e word) with a finger |
+| ✏️ Trace | Write each sound | Trace the little and the big letter (or the silent-e word) with a finger; a counter shows how many are left, and only a real trace passes (not half a letter or a scribble) |
 | 📖 Read Words / ✨ Magic e | 2. Read the words | Sound out each word, then pick the word you hear; in silent-e lessons, add the magic e (cap → cape) |
 | 👀 Sight Words | High-frequency words | Tap the sight words, then pop the bubble with the word you hear |
 | 🧩 Spell It | 3. Write the words + 5. Dictation | Hear a word and tap the letters in order |
 | 💬 Sentence | 4. Read a sentence | Read along, then put the words back in order |
-| 🎨 Draw | 6. Draw and label | Draw a picture and label it with a lesson word; the picture can be saved |
+| 🎨 Draw | 6. Draw and label | Draw a picture and label it with a lesson word (drag the word to move it, tap it to take it off); the picture can be saved |
 
 - A friendly lion (Leo) speaks every instruction out loud, so children don't need to read directions yet. Tap Leo to hear it again, or drag him anywhere on the screen (he remembers where; "Put Leo back" in Settings returns him to the corner).
 - Cheerful background music plays quietly and dips whenever Leo talks. Turn it off with "🎵 Music" at the bottom of the home screen or in Settings.
@@ -56,6 +56,8 @@ pip install kokoro-onnx lameenc numpy
 node tools/export_phrases.js     # writes tools/phrases.json (needs the playwright package)
 python3 tools/build_audio.py kokoro-v1.0.onnx voices-v1.0.bin   # records new clips, updates audio/manifest.js
 ```
+
+`build_audio.py` (and `make_music.py`) finish by running `tools/stamp.py`, which writes the new file versions into `index.html`, so browsers never mix a new page with an old clip list.
 
 The model files come from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0). To re-record specific lines, add `--redo "phrase one" "phrase two"`; `--all` re-records everything. Any line without a clip falls back to the browser's built-in speech.
 
