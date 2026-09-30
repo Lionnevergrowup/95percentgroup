@@ -5,6 +5,8 @@ It covers the same 25 lessons: letter sounds, short vowels, review lessons, and 
 
 **▶ Play:** https://lionnevergrowup.github.io/95percentgroup/
 
+Start screen: https://lionnevergrowup.github.io/95percentgroup/#/start · Parents page: https://lionnevergrowup.github.io/95percentgroup/#/parents
+
 ## What's inside
 
 Each lesson has 7 short activities that follow the workbook page:

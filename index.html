@@ -91,6 +91,8 @@ button{font-family:inherit;color:inherit}
 .topbar h1{margin:0}
 .brand{flex:1;display:flex;align-items:center;gap:8px;font-size:clamp(1.5rem,5vw,2.3rem);font-weight:700;min-width:0}
 .brand .logo{font-size:1.25em;animation:bob 3s ease-in-out infinite}
+.brand-btn{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%;overflow:hidden;border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;border-radius:14px}
+.brand-btn:focus-visible{outline:3px solid var(--purple);outline-offset:3px}
 .brand .name{background:linear-gradient(90deg,var(--purple),var(--pink),var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
 .title{flex:1;font-size:clamp(1.3rem,4.5vw,2rem);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pill{flex:none;background:#fff;border-radius:999px;padding:.3em .8em;font-weight:700;font-size:1.25rem;box-shadow:0 4px 0 var(--line);white-space:nowrap}
@@ -934,6 +936,7 @@ function route(){
     return a ? showActivity(l, a) : showLesson(l);
   }
   if (parts[0] === 'stickers') return showStickers();
+  if (parts[0] === 'start') return showStart();
   if (parts[0] === 'parents') return showParents();
   showHome();
 }
@@ -977,12 +980,13 @@ function soundName(s){ return isMagicSound(s) ? `${s[0].toUpperCase()}, magic e`
 /* =====================================================================
    SCREENS
    ===================================================================== */
-function showHome(){
+function showHome(quiet){
   const next = LESSONS.find(l => !lessonComplete(l.n));
   const groups = [['🔤 Letters & Short Vowels', 1, 16], ['⭐ Short Vowel Review', 17, 19], ['✨ Magic e (silent e)', 20, 25]];
   mount(
     h('header', {class:'topbar'},
-      h('h1', {class:'brand'}, h('span', {class:'logo', 'aria-hidden':'true'}, '🦁'), h('span', {class:'name'}, 'Phonics Fun')),
+      h('h1', {class:'brand'}, h('button', {class:'brand-btn', 'aria-label':'Phonics Fun: back to the start screen', title:'Start screen',
+        onclick:() => { Sfx.tap(); go('#/start'); }}, h('span', {class:'logo', 'aria-hidden':'true'}, '🦁'), h('span', {class:'name'}, 'Phonics Fun'))),
       starPill(),
       h('button', {class:'icon-btn', 'aria-label':'My stickers', onclick:() => { Sfx.tap(); go('#/stickers'); }}, '🏆'),
       h('button', {class:'icon-btn', 'aria-label':'For parents', onclick:() => { Sfx.tap(); go('#/parents'); }}, '👪'),
@@ -990,10 +994,34 @@ function showHome(){
     groups.map(([title, a, b]) => [
       h('h2', {class:'section-title'}, title),
       h('div', {class:'lesson-grid'}, LESSONS.slice(a - 1, b).map(l => lessonBtn(l, l === next))),
-    ])
+    ]),
+    h('div', {class:'row', style:{marginTop:'28px'}},
+      h('button', {class:'btn white', onclick:() => { Sfx.tap(); go('#/start'); }}, '🏁 Start screen'))
   );
+  if (quiet) return;
   const line = next && next.n > 1 ? P.playLesson(next.n) : T.pickLesson;
   say(line + ' 👆', line);
+}
+
+// The first screen ("Phonics Fun! ▶ Play"). Shown when the game opens, and at #/start.
+function showStart(){
+  if (/^#\/start/.test(location.hash)) showHome(true);   // the home screen waits underneath
+  overlay([
+    h('div', {class:'hero-lion'}, '🦁'),
+    h('h1', {}, 'Phonics Fun!'),
+    h('p', {}, 'Kindergarten phonics · 25 lessons'),
+    h('p', {style:{fontSize:'1.05rem', margin:'-8px 0 16px'}}, '🔊 Turn the sound on!'),
+    h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
+      audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win();
+      closeOverlay();
+      Speech.preload([...Object.values(T), ...PRAISE, ...TRY]);
+      // from the start screen, Play leads to the home screen
+      if (/^#\/start/.test(location.hash)) try { history.replaceState(null, '', location.pathname + location.search + '#/'); } catch (e) { location.hash = '#/'; }
+      const greet = location.hash.length > 2 ? null : T.greet;
+      if (greet) say(T.greetShow, greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
+      else route();
+    }}, '▶ Play')),
+  ], 'splash');
 }
 
 function lessonBtn(l, isNext){
@@ -1868,20 +1896,7 @@ if (/[?&]v=\d+/.test(location.search)) try { history.replaceState(null, '', loca
 window.addEventListener('hashchange', route);
 document.addEventListener('visibilitychange', () => { if (document.hidden) Speech.stop(); });
 route();
-if (!/^#\/parents/.test(location.hash)) overlay([
-  h('div', {class:'hero-lion'}, '🦁'),
-  h('h1', {}, 'Phonics Fun!'),
-  h('p', {}, 'Kindergarten phonics · 25 lessons'),
-  h('p', {style:{fontSize:'1.05rem', margin:'-8px 0 16px'}}, '🔊 Turn the sound on!'),
-  h('div', {class:'row'}, h('button', {class:'btn green big', style:{fontSize:'2rem', minHeight:'84px'}, onclick:() => {
-    audioUnlocked = true; Speech.unlock(); Sfx.ensure(); Sfx.win();
-    closeOverlay();
-    Speech.preload([...Object.values(T), ...PRAISE, ...TRY]);
-    const greet = location.hash.length > 2 ? null : T.greet;
-    if (greet) say(T.greetShow, greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
-    else route();
-  }}, '▶ Play')),
-], 'splash');
+if (!/^#\/(parents|start)/.test(location.hash)) showStart();   // #/start shows it via route()
 })();
 </script>
 </body>
