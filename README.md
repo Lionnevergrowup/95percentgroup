@@ -59,7 +59,7 @@ python3 tools/build_audio.py kokoro-v1.0.onnx voices-v1.0.bin   # records new cl
 
 `build_audio.py` (and `make_music.py`) finish by running `tools/stamp.py`, which writes the new file versions into `index.html`, so browsers never mix a new page with an old clip list.
 
-The model files come from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0). To re-record specific lines, add `--redo "phrase one" "phrase two"`; `--all` re-records everything. Any line without a clip falls back to the browser's built-in speech.
+The model files come from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0). To re-record specific lines, add `--redo "phrase one" "phrase two"`; `--all` re-records everything. Every clip is levelled to the same loudness (set by `LOUDNESS_DB` in `tools/build_audio.py`); after changing it, `python3 tools/build_audio.py --relevel` re-levels the existing clips without recording them again (needs `pip install av`). Any line without a clip falls back to the browser's built-in speech.
 
 ## Background music
 
