@@ -1725,13 +1725,26 @@ function actDraw(ctx){
     }}, h('span', {class:'dot', style:{width:dot + 'px', height:dot + 'px'}})));
   const eraser = h('button', {class:'tool', 'aria-label':'eraser', title:'eraser', 'aria-pressed':'false', onclick:() => {
     Sfx.tap(); erasing = !erasing; eraser.classList.toggle('on', erasing); eraser.setAttribute('aria-pressed', String(erasing)); }}, '🧽');
-  const undoBtn = h('button', {class:'tool', 'aria-label':'undo', title:'undo', onclick:() => { Sfx.tap(); const snap = history.pop(); if (snap) c2d.putImageData(snap, 0, 0); }}, '↩️');
-  const clearBtn = h('button', {class:'tool', 'aria-label':'clear picture', title:'clear picture', onclick:() => { Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; }}, '🗑️');
-  const bank = h('div', {class:'word-bank', role:'group', 'aria-label':'Pick a word for your picture'}, words.map(w => h('button', {class:'wchip', 'aria-pressed':'false', onclick:e => {
-    Sfx.tap(); label = w; labelEl.textContent = (PIC[w] ? PIC[w] + ' ' : '') + w;
-    [...bank.children].forEach(c => { c.classList.toggle('on', c === e.currentTarget); c.setAttribute('aria-pressed', String(c === e.currentTarget)); });
-    Speech.speak(w);
+  // undo brings back the picture, whether it had ink, and its word
+  const undoBtn = h('button', {class:'tool', 'aria-label':'undo', title:'undo', onclick:() => {
+    Sfx.tap(); const snap = history.pop();
+    if (snap){ c2d.putImageData(snap.img, 0, 0); hasInk = snap.ink; setLabel(snap.label); }
+  }}, '↩️');
+  // clear removes the drawing and its word
+  const clearBtn = h('button', {class:'tool', 'aria-label':'clear picture', title:'clear picture', onclick:() => {
+    Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; setLabel('');
+  }}, '🗑️');
+  // tap a word to label the picture; tap it again to take the label off
+  const bank = h('div', {class:'word-bank', role:'group', 'aria-label':'Pick a word for your picture'}, words.map(w => h('button', {class:'wchip', 'aria-pressed':'false', onclick:() => {
+    Sfx.tap();
+    if (label === w){ setLabel(''); return; }
+    setLabel(w); Speech.speak(w);
   }}, w)));
+  function setLabel(w){
+    label = w || '';
+    labelEl.textContent = label ? (PIC[label] ? PIC[label] + ' ' : '') + label : '';
+    [...bank.children].forEach(c => { const on = c.textContent === label; c.classList.toggle('on', on); c.setAttribute('aria-pressed', String(on)); });
+  }
   const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', title:'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
   const doneBtn = h('button', {class:'btn green big', onclick:() => {
     if (!hasInk){ Sfx.bad(); wiggle(wrap); say(T.drawFirst); return; }
@@ -1749,7 +1762,7 @@ function actDraw(ctx){
 
   let c2d = null, W = 0, H = 0, dpr = 1;
   function paintWhite(){ c2d.save(); c2d.setTransform(1, 0, 0, 1, 0, 0); c2d.fillStyle = '#fff'; c2d.fillRect(0, 0, cv.width, cv.height); c2d.restore(); }
-  function pushHistory(){ try { history.push(c2d.getImageData(0, 0, cv.width, cv.height)); if (history.length > 8) history.shift(); } catch (e) {} }
+  function pushHistory(){ try { history.push({img:c2d.getImageData(0, 0, cv.width, cv.height), ink:hasInk, label}); if (history.length > 8) history.shift(); } catch (e) {} }
   function layout(){
     const r = wrap.getBoundingClientRect();
     if (!r.width || !r.height) return;
@@ -1774,14 +1787,17 @@ function actDraw(ctx){
     up: () => { drawing = false; },
   });
   function savePicture(){
+    // the word goes in a strip under the picture; no word, no strip
     const out = document.createElement('canvas');
-    out.width = cv.width; out.height = cv.height + Math.round(90 * dpr);
+    out.width = cv.width; out.height = cv.height + (label ? Math.round(90 * dpr) : 0);
     const o = out.getContext('2d');
     o.fillStyle = '#fff'; o.fillRect(0, 0, out.width, out.height);
     o.drawImage(cv, 0, 0);
-    o.fillStyle = '#7c5cff'; o.textAlign = 'center'; o.textBaseline = 'middle';
-    o.font = `700 ${Math.round(44 * dpr)}px Andika, 'Comic Sans MS', sans-serif`;
-    o.fillText(label || `Lesson ${l.n}`, out.width / 2, cv.height + 45 * dpr);
+    if (label){
+      o.fillStyle = '#6c4cf0'; o.textAlign = 'center'; o.textBaseline = 'middle';
+      o.font = `700 ${Math.round(44 * dpr)}px Andika, 'Comic Sans MS', sans-serif`;
+      o.fillText(label, out.width / 2, cv.height + 45 * dpr);
+    }
     out.toBlob(blob => {
       if (!blob) return;
       const a = h('a', {href:URL.createObjectURL(blob), download:`phonics-lesson-${l.n}-${label || 'picture'}.png`});
