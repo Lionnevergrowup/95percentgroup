@@ -240,6 +240,14 @@ button{font-family:inherit;color:inherit}
 .wchip.used{visibility:hidden}
 .wslot{display:inline-block;min-height:1.35em;border:4px dashed #bdb3ea;border-radius:16px;background:rgba(255,255,255,.55);padding:0 .25em;text-align:center}
 .wslot.filled{border-style:solid;border-color:var(--green);background:#fff;animation:pop-in .25s}
+.wtext{display:inline-flex;align-items:center;padding:.08em 0}
+.big-letter{font-family:var(--font-read);font-weight:700;font-size:clamp(3.4rem,11vw,5.2rem);line-height:1.1;min-width:1.4em;padding:0 .2em;text-align:center;
+  background:#fff;border-radius:24px;box-shadow:0 7px 0 var(--line);color:var(--purple)}
+.miss-word{background:#fff;border-radius:26px;box-shadow:0 7px 0 var(--line);padding:6px 26px}
+.miss-word .word{font-size:clamp(3rem,11vw,4.8rem)}
+.word .lt.gap{color:transparent;border:4px dashed #bdb3ea;border-radius:14px;min-width:.62em;text-align:center;margin:0 .06em}
+.word .lt.found{color:var(--green-d);animation:pop-in .25s}
+.tile.vowel{background:var(--pink);box-shadow:0 7px 0 var(--pink-d)}
 
 /* tracing */
 .trace-top{display:flex;align-items:center;gap:12px;font-family:var(--font-read);font-weight:700;font-size:clamp(1.3rem,4vw,1.8rem)}
@@ -435,7 +443,7 @@ table.prog td.l small{color:var(--ink-soft)}
 <noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
 <script>
 // Versions of the audio files, filled in by tools/stamp.py, so a page never uses an older clip list.
-var AUDIO_VERSION = {manifest:'66bc436ce3', music:'7264c3b77d'};
+var AUDIO_VERSION = {manifest:'ce2b282908', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
 <script>
@@ -560,6 +568,15 @@ const T = {
   drawFirst:'Draw a picture first! 🖍️', tapWordPic:'Now tap a word for your picture! 🏷️',
   drawIntroShow:'Draw something you can read! Then tap a word. 🎨', drawIntro:'Draw something you can read or spell! Then tap a word for your picture.',
   yourPicture:'Your picture is:', greatDrawing:'Great drawing!',
+  beginQ:'What sound does it start with?', whichSound:'Which sound do you hear?',
+  pictureWord:'Which word matches the picture?', missingLetter:'Which letter is missing?',
+  popAll:'Pop every bubble that says:', missingWord:'Read the sentence. Which word is missing?',
+};
+// What the bubble shows for a question (Leo says the matching line in T)
+const SHOW = {
+  begin:'What sound does it start with? 🤔', whichSound:'Listen. Which sound do you hear? 👂', findLittle:'Find the little letter! 🔍',
+  pictureWord:'Which word matches the picture? 🖼️', missingLetter:'Which letter is missing? 🧩',
+  popAll:'Pop every bubble with the word! 🔵', missingWord:'Read the sentence. Which word is missing? 🤔',
 };
 const article = w => /^(a|e|i|o|u(?!ni))/i.test(w) ? 'an' : 'a';   // an owl, a unicorn
 const P = {
@@ -575,6 +592,9 @@ const P = {
   thatIs: s => `That is ${soundName(s)}.`,
   find: s => `Find ${soundName(s)}!`,
   magicMakes: v => `Magic e makes ${v.toUpperCase()} say its name.`,
+  startsWith: w => `${w[0].toUpperCase() + w.slice(1)} starts with ${w[0].toUpperCase()}.`,
+  findLittle: s => `This is big ${s.toUpperCase()}. Where is little ${s.toUpperCase()}?`,
+  bigLittle: s => `Big ${s.toUpperCase()} and little ${s.toUpperCase()}!`,
 };
 
 /* ---------- small helpers ---------- */
@@ -621,6 +641,62 @@ function hfWords(l){
 }
 const allWords = l => uniq([...(l.pairs || []).flat(), ...(l.words || [])]);
 const MAGIC_WORDS = new Set(LESSONS.flatMap(l => l.pairs ? [...l.pairs.map(p => p[1]), ...(l.words || [])] : []));
+
+/* ---------- question variety and difficulty ---------- */
+// Letters a child easily mixes up; later rounds use them as wrong answers.
+const LOOKALIKE = {b:'dpqh', d:'bqp', p:'qbd', q:'pgd', m:'nw', n:'mhu', u:'nv', h:'nb', i:'lj', l:'it', j:'ig', t:'fl', f:'t',
+  c:'eo', e:'co', o:'ca', a:'oe', g:'qj', v:'wyu', w:'vm', y:'vg', k:'hx', x:'kz', z:'sx', s:'zc', r:'n'};
+// Letters that make the same sound, so they are never the wrong answer for each other.
+const SAME_SOUND = {c:'kq', k:'cq', q:'ck'};
+// Pictures for "What sound does it start with?" (each word starts with the lesson's sound; x has none)
+const BEGIN_PICS = {
+  a:[['apple','🍎'],['ant','🐜'],['alligator','🐊']], b:[['bear','🐻'],['banana','🍌'],['bus','🚌']],
+  c:[['cat','🐱'],['car','🚗'],['cow','🐮'],['cake','🎂']], d:[['dog','🐶'],['duck','🦆'],['drum','🥁']],
+  e:[['egg','🥚'],['elephant','🐘']], f:[['fish','🐟'],['fox','🦊'],['frog','🐸']], g:[['goat','🐐'],['girl','👧'],['guitar','🎸']],
+  h:[['horse','🐴'],['hat','🎩'],['house','🏠']], i:[['inchworm','🐛']], j:[['juice','🧃'],['jet','✈️']],
+  k:[['key','🔑'],['kite','🪁'],['kangaroo','🦘']], l:[['lion','🦁'],['leaf','🍃'],['lemon','🍋']],
+  m:[['monkey','🐵'],['moon','🌙'],['mouse','🐭']], n:[['nose','👃'],['nine','9️⃣']], o:[['octopus','🐙'],['otter','🦦'],['ox','🐂']],
+  p:[['pig','🐷'],['pizza','🍕'],['panda','🐼'],['pan','🍳']], q:[['queen','👸']], r:[['rabbit','🐰'],['rocket','🚀'],['robot','🤖']],
+  s:[['sun','☀️'],['snake','🐍'],['sock','🧦'],['star','⭐']], t:[['tiger','🐯'],['turtle','🐢'],['tooth','🦷'],['tomato','🍅']],
+  u:[['umbrella','☂️'],['up','⬆️']], v:[['violin','🎻'],['van','🚐'],['volcano','🌋']], w:[['watermelon','🍉'],['worm','🪱'],['web','🕸️']],
+  y:[['yo-yo','🪀'],['yarn','🧶']], z:[['zebra','🦓'],['zipper','🤐']],
+};
+// Words whose picture clearly shows them (for "Which word matches the picture?")
+const PIC_CLEAR = new Set(['pan','ant','map','dog','sad','mad','hat','bat','ham','log','cat','fox','bed','jet','van','sun','cub','hot','cap','cape',
+  'kite','pin','pine','note','cube','tub','cut','red','rod','nap','jog','wet','fix','yam','robe','cute','tube','win','kit']);
+// The first two rounds are easier (3 choices, clearly different); later rounds have 4 choices and look-alikes.
+const hard = r => r >= 2;
+// How alike two words look: same length, same letters in the same places, shared letters.
+function similarity(a, b){
+  a = a.toLowerCase(); b = b.toLowerCase();
+  let s = a.length === b.length ? 2 : Math.abs(a.length - b.length) === 1 ? 1 : 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] === b[i]) s += 2;
+  for (const c of new Set(a)) if (b.includes(c)) s += 1;
+  return s;
+}
+const mostSimilar = (target, pool, k) => shuffle(pool).sort((x, y) => similarity(target, y) - similarity(target, x)).slice(0, k);
+// Question types take turns: the first round is the easiest type, then the type used least so far (never twice in a row).
+function typePlan(n, types){
+  const used = Object.fromEntries(types.map(t => [t, 0])), plan = [];
+  for (let r = 0; r < n; r++){
+    const free = types.filter(t => t !== plan[r - 1]);
+    const min = Math.min(...free.map(t => used[t]));
+    const t = r === 0 ? types[0] : (free.length ? pick(free.filter(x => used[x] === min)) : types[0]);
+    plan.push(t); used[t]++;
+  }
+  return plan;
+}
+// Letter choices for a round: the answer, then look-alikes (later rounds), then the lesson's other sounds and other letters.
+function letterChoices(target, l, r, avoid = ''){
+  const n = hard(r) ? 4 : 3, like = LOOKALIKE[target] || '';
+  const skip = c => c === target || avoid.includes(c) || (SAME_SOUND[target] || '').includes(c);
+  const look = hard(r) ? shuffle([...like]).filter(c => !skip(c)).slice(0, 2) : [];
+  const rest = uniq([...shuffle(l.sounds.filter(s => !isMagicSound(s))), ...shuffle(ALPHA)]).filter(c => !skip(c) && !look.includes(c) && (hard(r) || !like.includes(c)));
+  return shuffle([target, ...look, ...rest].slice(0, n));
+}
+// test hook: the current question's answer
+let quizN = 0;
+function quizHook(type, answer){ if (window.__quiz) window.__quiz = {n: ++quizN, type, answer}; }
 
 // A shuffled list of length clamp(items, min, max) with no back-to-back repeats.
 function roundList(items, min, max){
@@ -1406,10 +1482,13 @@ function confirmReset(){
    ACTIVITIES
    ===================================================================== */
 
-// 1 · Sounds: tap the cards, then pop the balloon with the sound you hear
+// 1 · Sounds: tap the cards, then pop the balloon. Question types take turns:
+// hear (Leo says the letter), begin (a picture: what sound does it start with?), case (big T: find little t),
+// and in silent-e lessons vowel (Leo says cap or cape: a or a_e?).
 function actSounds(ctx){
-  const l = ctx.lesson, targets = l.sounds;
+  const l = ctx.lesson, targets = l.sounds, magic = targets.some(isMagicSound);
   const order = roundList(targets, targets.length === 1 ? 4 : 6, 6);
+  const plan = typePlan(order.length, magic ? ['hear', 'vowel'] : ['hear', 'begin', 'case']);
   const total = order.length + 1;
   const seen = new Set();
   const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🎈 Play ➜');
@@ -1432,31 +1511,62 @@ function actSounds(ctx){
     if (r >= order.length){ ctx.progress(1); later(ctx.done, 300); return; }
     ctx.progress((r + 1) / total);
     const target = order[r];
-    const pool = isMagicSound(target)
-      ? uniq([...targets, ...shuffle(MAGIC_SOUNDS)]).filter(x => x !== target)
-      : uniq([...shuffle(targets), ...shuffle(ALPHA)]).filter(x => x !== target);
-    const opts = shuffle([target, ...pool.slice(0, 3)]);
+    let type = plan[r];
+    if (type === 'begin' && !BEGIN_PICS[target]) type = 'case';
+    const vpairs = (l.pairs || []).filter(p => isMagicSound(target) && p[1][firstVowel(p[1])].toLowerCase() === target[0]);
+    if (type === 'vowel' && !vpairs.length) type = 'hear';
+    let answer = target, opts, top = null, prompt, right, wrong;
+    if (type === 'vowel'){
+      // hear a word from the lesson: does the vowel say its sound (cap) or its name (cape)?
+      const pair = pick(vpairs), long = Math.random() < 0.5, word = long ? pair[1] : pair[0];
+      answer = long ? target : target[0];
+      opts = shuffle([target[0], target, ...(hard(r) ? shuffle(MAGIC_SOUNDS.filter(x => x !== target)).slice(0, 1) : [])]);
+      top = h('div', {class:'quiz-pic show'}, PIC[word] || '👂');
+      prompt = () => say(SHOW.whichSound, [word, T.whichSound]);
+      right = pr => [pr, word, P.thatIs(answer)];
+      wrong = s => [P.thatIs(s), word, T.whichSound];
+    } else if (type === 'begin'){
+      const [word, pic] = pick(BEGIN_PICS[target]);
+      opts = letterChoices(target, l, r);
+      top = h('div', {class:'quiz-pic show', 'aria-label':word}, pic);
+      prompt = () => say(SHOW.begin, [word, T.beginQ]);
+      right = pr => [pr, P.startsWith(word)];
+      wrong = s => [P.thatIs(s), word, T.beginQ];
+    } else if (type === 'case'){
+      opts = letterChoices(target, l, r);
+      top = h('div', {class:'big-letter', 'aria-label':'big ' + target.toUpperCase()}, target.toUpperCase());
+      prompt = () => say(SHOW.findLittle, P.findLittle(target));
+      right = pr => [pr, P.bigLittle(target)];
+      wrong = s => [P.thatIs(s), P.findLittle(target)];
+    } else {
+      opts = isMagicSound(target)
+        ? shuffle([target, ...uniq([...shuffle(targets), ...shuffle(MAGIC_SOUNDS)]).filter(x => x !== target).slice(0, hard(r) ? 3 : 2)])
+        : letterChoices(target, l, r);
+      prompt = () => say(T.popBalloon, P.popLetter(target));
+      right = pr => [pr, soundName(target)];
+      wrong = s => [P.thatIs(s), P.find(target)];
+    }
+    quizHook(type, answer);
     const colors = ['var(--pink)','var(--blue)','var(--orange)','var(--green)','var(--purple)','var(--teal)'];
-    const prompt = () => say(T.popBalloon, P.popLetter(target));
     let solved = false, misses = 0;
     const balloons = opts.map((s, i) => {
       const bc = colors[(i + r) % colors.length];
       const b = h('button', {class:'balloon' + (LIGHT_BG.has(bc) ? ' ink' : ''), 'aria-label':'balloon ' + s, style:{'--c':bc, animationDelay:(i * 0.4) + 's'}, onclick:() => {
         if (solved) return;
-        if (s === target){
+        if (s === answer){
           solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
           ctx.progress((r + 2) / total);
           const pr = pick(PRAISE);
-          afterSay(say(pr, [pr, soundName(target)]), 1200, () => round(r + 1));
+          afterSay(say(pr, right(pr)), 1200, () => round(r + 1));
         } else {
           misses++; Sfx.bad(); wiggle(b);
-          say(pick(TRY), [P.thatIs(s), P.find(target)]);
-          if (misses >= 2) balloons[opts.indexOf(target)].classList.add('hint');
+          say(pick(TRY), wrong(s));
+          if (misses >= 2) balloons[opts.indexOf(answer)].classList.add('hint');
         }
       }}, s);
       return b;
     });
-    ctx.stage.replaceChildren(listenBtn(prompt), h('div', {class:'balloons'}, balloons));
+    ctx.stage.replaceChildren(h('div', {class:'row'}, listenBtn(prompt), top), h('div', {class:'balloons'}, balloons));
     ctx.replay = prompt; prompt();
   }
 }
@@ -1645,42 +1755,84 @@ async function soundOut(we, word){
   await Speech.speak(word, {rate:0.9});
   we.classList.remove('whole');
 }
-function distractorWords(l, target, k){
+// Wrong answers for a word question: the silent-e partner first (cap for cape), then (in later rounds) the words that look most
+// alike, then other words from this lesson, earlier lessons and the sight words. ok(w) can rule words out.
+function distractorWords(l, target, k, hardRound, ok = () => true){
   const out = [];
-  if (l.pairs){ const p = l.pairs.find(p => p.includes(target)); if (p) out.push(p[0] === target ? p[1] : p[0]); }
-  const same = w => w.toLowerCase() === target.toLowerCase() || out.includes(w);
-  for (const w of shuffle(allWords(l))) if (out.length < k && !same(w)) out.push(w);
-  if (out.length < k) for (const w of shuffle(uniq(LESSONS.filter(x => x.n < l.n).flatMap(allWords)))) if (out.length < k && !same(w)) out.push(w);
-  if (out.length < k) for (const w of shuffle(hfWords(l))) if (out.length < k && !same(w)) out.push(w);
+  const bad = w => w.toLowerCase() === target.toLowerCase() || out.includes(w) || !ok(w);
+  if (l.pairs){ const p = l.pairs.find(p => p.includes(target)); if (p){ const o = p[0] === target ? p[1] : p[0]; if (!bad(o)) out.push(o); } }
+  const pools = [allWords(l), uniq(LESSONS.filter(x => x.n < l.n).flatMap(allWords)), hfWords(l)];
+  if (hardRound) for (const w of mostSimilar(target, uniq(pools[0].concat(pools[1])).filter(w => !bad(w)), 2)) if (out.length < k) out.push(w);
+  for (const pool of pools) for (const w of shuffle(pool)) if (out.length < k && !bad(w)) out.push(w);
   return out;
 }
+const isCVC = w => /^[b-df-hj-np-tv-z][aeiou][b-df-hj-np-tv-z]$/.test(w);
+// Vowels a child has met by this lesson (so "c_t" never offers a vowel that has not been taught)
+const taughtVowels = l => uniq(LESSONS.filter(x => x.n <= l.n).flatMap(x => x.sounds).filter(s => 'aeiou'.includes(s)));
+// Word questions take turns: hear (tap the word Leo says), picture (read the words, tap the one that matches the picture),
+// missing (c_t: tap the missing vowel; short-vowel words only).
 function wordQuiz(ctx, targets, doneSteps, total, onDone){
   const l = ctx.lesson;
+  const plan = typePlan(targets.length, l.pairs ? ['hear', 'picture'] : ['hear', 'picture', 'missing']);
   const round = r => {
     if (r >= targets.length){ onDone(); return; }
     ctx.progress((doneSteps + r) / total);
-    const target = targets[r];
-    const opts = shuffle([target, ...distractorWords(l, target, 2)]);
-    const pic = h('div', {class:'quiz-pic'}, PIC[target] || '⭐');
-    const prompt = () => say(T.listenTap, [T.findWord, target]);
-    let solved = false, misses = 0;
-    const btns = opts.map(w => {
-      const b = h('button', {class:'choice', onclick:() => {
-        if (solved) return;
-        if (w === target){
-          solved = true; b.classList.add('right'); Sfx.good(); burst(b); pic.classList.add('show');
-          ctx.progress((doneSteps + r + 1) / total);
-          const pr = pick(PRAISE);
-          afterSay(say(pr, [pr, target]), 1200, () => round(r + 1));
-        } else {
-          misses++; Sfx.bad(); wiggle(b);
-          say(pick(TRY), [w, T.findWord, target]);
-          if (misses >= 2) btns[opts.indexOf(target)].classList.add('hint');
-        }
-      }}, wordEl(w));
-      return b;
-    });
-    ctx.stage.replaceChildren(listenBtn(prompt), pic, h('div', {class:'choices'}, btns));
+    const target = targets[r], k = hard(r) ? 3 : 2;
+    let type = plan[r];
+    const picOK = w => !PIC[w] || PIC[w] !== PIC[target];   // never two words with the same picture
+    if (type === 'picture' && (!PIC_CLEAR.has(target) || distractorWords(l, target, k, false, picOK).length < 2)) type = isCVC(target) && !l.pairs ? 'missing' : 'hear';
+    if (type === 'missing' && !isCVC(target)) type = PIC_CLEAR.has(target) ? 'picture' : 'hear';
+    const pic = h('div', {class:'quiz-pic' + (type === 'hear' ? '' : ' show')}, PIC[target] || '⭐');
+    let solved = false, misses = 0, prompt, body;
+    const win = el => {
+      solved = true; el.classList.add('right'); Sfx.good(); burst(el); pic.classList.add('show');
+      ctx.progress((doneSteps + r + 1) / total);
+      const pr = pick(PRAISE);
+      afterSay(say(pr, [pr, target]), 1200, () => round(r + 1));
+    };
+    if (type === 'missing'){
+      // the word with its vowel missing; the choices are vowels
+      const vi = firstVowel(target), v = target[vi];
+      const gap = h('span', {class:'lt gap'}, '?');
+      const word = h('span', {class:'word'}, [...target].map((ch, j) => j === vi ? gap : h('span', {class:'lt'}, ch)));
+      // only vowels taught so far (at least two wrong ones, so there are always three choices)
+      const taught = shuffle(taughtVowels(l)).filter(x => x !== v);
+      const others = (taught.length >= 2 ? taught : uniq([...taught, ...shuffle([...'aeiou'])]).filter(x => x !== v)).slice(0, Math.max(2, Math.min(k, taught.length)));
+      const opts = shuffle([v, ...others]);
+      prompt = () => say(SHOW.missingLetter, [T.missingLetter, target]);
+      const btns = opts.map(x => {
+        const b = h('button', {class:'tile vowel', 'aria-label':'letter ' + x, onclick:() => {
+          if (solved) return;
+          if (x === v){ gap.textContent = v; gap.classList.remove('gap'); gap.classList.add('found'); win(b); }
+          else {
+            misses++; Sfx.bad(); wiggle(b);
+            say(pick(TRY), [P.thatIs(x), T.missingLetter, target]);
+            if (misses >= 2) btns[opts.indexOf(v)].classList.add('hint');
+          }
+        }}, x);
+        return b;
+      });
+      quizHook(type, v);
+      body = [h('div', {class:'miss-word'}, word), h('div', {class:'tiles'}, btns)];
+    } else {
+      const opts = shuffle([target, ...distractorWords(l, target, k, hard(r), type === 'picture' ? picOK : undefined)]);
+      prompt = type === 'picture' ? () => say(SHOW.pictureWord, T.pictureWord) : () => say(T.listenTap, [T.findWord, target]);
+      const btns = opts.map(w => {
+        const b = h('button', {class:'choice', onclick:() => {
+          if (solved) return;
+          if (w === target) win(b);
+          else {
+            misses++; Sfx.bad(); wiggle(b);
+            say(pick(TRY), type === 'picture' ? [w, T.pictureWord] : [w, T.findWord, target]);
+            if (misses >= 2) btns[opts.indexOf(target)].classList.add('hint');
+          }
+        }}, wordEl(w));
+        return b;
+      });
+      quizHook(type, target);
+      body = [h('div', {class:'choices'}, btns)];
+    }
+    ctx.stage.replaceChildren(listenBtn(prompt), pic, ...body);
     ctx.replay = prompt; prompt();
   };
   round(0);
@@ -1778,29 +1930,37 @@ function actSight(ctx){
   const intro = () => say(T.sightIntro);
   ctx.replay = intro; intro();
 
+  // hear: pop the word Leo says; all: pop every bubble with that word (2 or 3 of them). Later rounds use look-alike words.
+  const plan = typePlan(order.length, ['hear', 'all']);
   function round(r){
     if (r >= order.length){ ctx.progress(1); later(ctx.done, 300); return; }
     ctx.progress((r + 1) / total);
-    const target = order[r];
-    const others = uniq([...shuffle(words), ...shuffle(pool)]).filter(w => w !== target).slice(0, 3);
-    const opts = shuffle([target, ...others]);
+    const target = order[r], type = plan[r];
+    const pool2 = uniq([...words, ...pool]).filter(w => w !== target);
+    const nOther = hard(r) ? 3 : 2, copies = type === 'all' ? (hard(r) ? 3 : 2) : 1;
+    const look = hard(r) ? mostSimilar(target, pool2, 2) : [];
+    const others = uniq([...look, ...shuffle(words), ...shuffle(pool)]).filter(w => w !== target).slice(0, nOther);
+    const opts = shuffle([...Array(copies).fill(target), ...others]);
     const colors = ['var(--teal)','var(--pink)','var(--purple)','var(--blue)'];
-    const prompt = () => say(T.popWordShow, [T.popWord, target]);
-    let solved = false, misses = 0;
+    const prompt = type === 'all' ? () => say(SHOW.popAll, [T.popAll, target]) : () => say(T.popWordShow, [T.popWord, target]);
+    quizHook(type, target);
+    let solved = false, misses = 0, left = copies;
     const bubbles = opts.map((w, k) => {
       const bc = colors[(k + r) % colors.length];
       const b = h('button', {class:'balloon bubble-word' + (LIGHT_BG.has(bc) ? ' ink' : ''), style:{'--c':bc, animationDelay:(k * 0.35) + 's'},
         onclick:() => {
-          if (solved) return;
+          if (solved || b.classList.contains('pop')) return;
           if (w === target){
-            solved = true; Sfx.pop(); Sfx.good(); b.classList.add('pop'); burst(b);
+            Sfx.pop(); b.classList.add('pop'); b.classList.remove('hint');
+            if (--left > 0){ Sfx.tick(copies - left); Speech.speak(target); return; }
+            solved = true; Sfx.good(); burst(b);
             ctx.progress((r + 2) / total);
             const pr = pick(PRAISE);
             afterSay(say(pr, [pr, target]), 1200, () => round(r + 1));
           } else {
             misses++; Sfx.bad(); wiggle(b);
-            say(pick(TRY), [w, T.popWord, target]);
-            if (misses >= 2) bubbles[opts.indexOf(target)].classList.add('hint');
+            say(pick(TRY), type === 'all' ? [w, T.popAll, target] : [w, T.popWord, target]);
+            if (misses >= 2) bubbles.forEach((x, j) => { if (opts[j] === target && !x.classList.contains('pop')) x.classList.add('hint'); });
           }
         }}, w);
       return b;
@@ -1817,11 +1977,14 @@ function spellWords(l){
   if (w.length < 3) w = uniq([...w, ...hfWords(l).filter(x => x.length <= 4)]);
   return shuffle(w).slice(0, 6);
 }
-function spellExtras(l, word, k){
+// Extra letter tiles. Later rounds add letters that look like the word's letters (b for d) and other vowels;
+// letters that sound the same (c and k) are left out, so a word is never "spelled right" the wrong way.
+function spellExtras(l, word, k, hardRound){
   const inWord = new Set([...word.toLowerCase()]);
-  const confusing = new Set(word.includes('I') ? ['l','i'] : []);
-  const pool = uniq([...shuffle(l.sounds.filter(s => s.length === 1)), ...shuffle(ALPHA)]).filter(c => !inWord.has(c) && !confusing.has(c));
-  return pool.slice(0, k);
+  const skip = new Set([...(word.includes('I') ? 'li' : ''), ...[...inWord].flatMap(c => [...(SAME_SOUND[c] || '')])]);
+  const ok = c => !inWord.has(c) && !skip.has(c);
+  const look = hardRound ? shuffle(uniq([...inWord].flatMap(c => [...(LOOKALIKE[c] || ''), ...('aeiou'.includes(c) ? 'aeiou' : '')]))).filter(ok).slice(0, k - 1) : [];
+  return uniq([...look, ...shuffle(l.sounds.filter(s => s.length === 1)), ...shuffle(ALPHA)]).filter(ok).slice(0, k);
 }
 function actSpell(ctx){
   const l = ctx.lesson, list = spellWords(l);
@@ -1831,9 +1994,13 @@ function actSpell(ctx){
     const word = list[r], chars = [...word];
     let pos = 0, misses = 0, solved = false;
     const slots = chars.map(() => h('div', {class:'slot'}));
-    const pic = h('div', {class:'spell-pic'}, PIC[word] || '👂');
+    // the last two words are dictation: no picture until the word is spelled
+    const dictation = list.length >= 4 && r >= list.length - 2;
+    const pic = h('div', {class:'spell-pic'}, dictation || !PIC[word] ? '👂' : PIC[word]);
     const prompt = () => say(T.spellShow, [T.spellWord, word]);
-    const tiles = shuffle([...chars, ...spellExtras(l, word, word.length > 1 ? 2 : 3)]).map(ch => {
+    const extras = (r === 0 ? 1 : r < 3 ? 2 : 3) + (word.length === 1 ? 1 : 0);
+    quizHook(dictation ? 'dictation' : 'spell', word);
+    const tiles = shuffle([...chars, ...spellExtras(l, word, extras, hard(r))]).map(ch => {
       const t = h('button', {class:'tile', onclick:() => {
         if (solved || t.classList.contains('used')) return;
         if (ch === chars[pos]){
@@ -1842,6 +2009,7 @@ function actSpell(ctx){
           tiles.forEach(x => x.classList.remove('hint'));
           if (pos === chars.length){
             solved = true; Sfx.good(); burst(slotRow);
+            if (PIC[word]) pic.textContent = PIC[word];
             ctx.progress((r + 1) / list.length);
             const pr = pick(PRAISE);
             afterSay(say(pr, [pr, ...chars.map(soundName), word]), 1400, () => round(r + 1));
@@ -1861,12 +2029,12 @@ function actSpell(ctx){
   round(0);
 }
 
-// 6 · Sentence: read along, then put the words in order
+// 6 · Sentence: read along, put the words in order, then find the missing word
 function actSentence(ctx){
-  const l = ctx.lesson, sents = l.sentences, total = sents.length * 2;
+  const l = ctx.lesson, sents = l.sentences, total = sents.length * 3;
   let readTok = 0;
   const readPhase = k => {
-    ctx.progress((k * 2) / total);
+    ctx.progress((k * 3) / total);
     const [text, picture] = sents[k];
     const tokens = text.split(' ');
     const chips = tokens.map(t => h('button', {class:'wchip', onclick:e => {
@@ -1897,7 +2065,7 @@ function actSentence(ctx){
     say(T.readSentenceShow, T.readSentence).then(() => { if (ctx.alive() && readTok === tok0) readAlong(); });
   };
   const buildPhase = k => {
-    ctx.progress((k * 2 + 1) / total);
+    ctx.progress((k * 3 + 1) / total);
     const [text, picture] = sents[k];
     const tokens = text.split(' ');
     let order = shuffle(tokens.map((t, idx) => idx));
@@ -1914,9 +2082,9 @@ function actSentence(ctx){
           pos++; misses = 0; Sfx.tick(pos); chips.forEach(x => x.classList.remove('hint'));
           if (pos === tokens.length){
             solved = true; Sfx.good(); confetti(25);
-            ctx.progress((k * 2 + 2) / total);
+            ctx.progress((k * 3 + 2) / total);
             const pr = pick(PRAISE);
-            say(pr, [pr, text]).then(() => later(() => { if (k + 1 < sents.length) readPhase(k + 1); else ctx.done(); }, 500));
+            say(pr, [pr, text]).then(() => later(() => missPhase(k), 500));
           } else Speech.speak(cleanWord(t));
         } else {
           misses++; Sfx.bad(); wiggle(c);
@@ -1929,7 +2097,55 @@ function actSentence(ctx){
       h('div', {class:'sentence'}, slots), h('div', {class:'sentence'}, chips));
     ctx.replay = prompt; prompt();
   };
+  // one word is missing; the child reads the sentence and picks it from look-alike words
+  const missPhase = k => {
+    ctx.progress((k * 3 + 2) / total);
+    const [text, picture] = sents[k];
+    const tokens = text.split(' '), words = tokens.map(cleanWord);
+    const idx = missingIndex(l, words), target = words[idx];
+    const inSentence = new Set(words.map(w => w.toLowerCase()));
+    const pool = uniq([...allWords(l), ...LESSONS.filter(x => x.n < l.n).flatMap(allWords), ...hfWords(l)]).filter(w => !inSentence.has(w.toLowerCase()) && w !== 'I' && w !== 'a');
+    const fit = w => idx === 0 ? w[0].toUpperCase() + w.slice(1) : w;   // a first word starts with a capital
+    let wrong = mostSimilar(target, pool, 2);
+    if (wrong.length < 2){   // early lessons know few words: borrow look-alikes from later lessons
+      const more = uniq(LESSONS.flatMap(allWords)).filter(w => !inSentence.has(w.toLowerCase()) && !wrong.includes(w) && w.length > 1);
+      wrong = wrong.concat(mostSimilar(target, more, 2 - wrong.length));
+    }
+    const said = new Map(wrong.map(w => [fit(w), w]));   // Leo says a wrong word as it is recorded (cot, not Cot)
+    const opts = shuffle([target, ...wrong.map(fit)]);
+    const gap = h('span', {class:'wslot', style:{minWidth:(target.length * 0.62 + 0.6) + 'em'}});
+    const shown = tokens.map((t, i) => i === idx ? h('span', {class:'wtext'}, gap, t.slice(target.length)) : h('span', {class:'wtext'}, t));
+    const prompt = () => say(SHOW.missingWord, T.missingWord);
+    quizHook('missing-word', target);
+    let solved = false, misses = 0;
+    const chips = opts.map(w => {
+      const c = h('button', {class:'wchip', onclick:() => {
+        if (solved) return;
+        if (w === target){
+          solved = true; gap.textContent = w; gap.classList.add('filled'); c.classList.add('used'); Sfx.good(); confetti(20);
+          ctx.progress((k * 3 + 3) / total);
+          const pr = pick(PRAISE);
+          say(pr, [pr, text]).then(() => later(() => { if (k + 1 < sents.length) readPhase(k + 1); else ctx.done(); }, 500));
+        } else {
+          misses++; Sfx.bad(); wiggle(c);
+          say(pick(TRY), [said.get(w) || w, T.missingWord]);
+          if (misses >= 2) chips[opts.indexOf(target)].classList.add('hint');
+        }
+      }}, w);
+      return c;
+    });
+    ctx.stage.replaceChildren(h('div', {class:'row'}, listenBtn(prompt), h('div', {class:'sent-pic small'}, picture)),
+      h('div', {class:'sentence'}, shown), h('div', {class:'sentence'}, chips));
+    ctx.replay = prompt; prompt();
+  };
   readPhase(0);
+}
+
+// The word to leave out: a lesson word if there is one, else a sight word, else the longest word (not the first word if possible)
+function missingIndex(l, words){
+  const lw = new Set(allWords(l).map(w => w.toLowerCase())), hw = new Set(hfWords(l).map(w => w.toLowerCase()));
+  const score = i => { const w = words[i].toLowerCase(); return (lw.has(w) ? 6 : hw.has(w) ? 4 : 0) + (i > 0 ? 2 : 0) + Math.min(w.length, 5) * 0.1; };
+  return words.map((w, i) => i).filter(i => words[i].length > 1).sort((a, b) => score(b) - score(a))[0] || 0;
 }
 
 // 7 · Draw and label
@@ -2121,6 +2337,7 @@ function lessonPhrases(l){
   return uniq([
     P.lesson(l.n), P.playLesson(l.n), P.finished(l.n), P.gotSticker(name), P.aSticker(name), P.finishFor(l.n), P.haveStickers(l.n),
     ...l.sounds.flatMap(x => [soundSay(x), P.popLetter(x), P.thatIs(x), P.find(x), soundName(x)]),
+    ...l.sounds.filter(x => !isMagicSound(x)).flatMap(x => [P.findLittle(x), P.bigLittle(x), ...(BEGIN_PICS[x] || []).flatMap(([w]) => [w, P.startsWith(w)])]),
     ...uniq(allWords(l).join('').split('')).map(soundName),
     ...ACTS.map(a => P.playAct(actName(l, a))),
     ...allWords(l), ...hfWords(l),

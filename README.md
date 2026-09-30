@@ -13,17 +13,18 @@ Each lesson has 7 short activities that follow the workbook page:
 
 | Activity | Workbook section | What the child does |
 |---|---|---|
-| 🔤 Sounds | 1. Say the sounds | Tap the letter cards to hear them, then pop the balloon with the sound Leo says |
+| 🔤 Sounds | 1. Say the sounds | Tap the letter cards to hear them, then pop balloons: the letter Leo says, the first sound of a picture (🐶 → d), the little letter for a big one (M → m), and in silent-e lessons whether a word has the short or the long vowel (cap → a, cape → a_e) |
 | ✏️ Trace | Write each sound | Trace the little and the big letter (or the silent-e word) with a finger; a counter shows how many are left, and only a real trace passes (not half a letter or a scribble) |
-| 📖 Read Words / ✨ Magic e | 2. Read the words | Sound out each word, then pick the word you hear; in silent-e lessons, add the magic e (cap → cape) |
-| 👀 Sight Words | High-frequency words | Tap the sight words, then pop the bubble with the word you hear |
-| 🧩 Spell It | 3. Write the words + 5. Dictation | Hear a word and tap the letters in order |
-| 💬 Sentence | 4. Read a sentence | Read along, then put the words back in order |
+| 📖 Read Words / ✨ Magic e | 2. Read the words | Sound out each word, then pick the word you hear, the word that matches a picture, or the missing vowel (d_g); in silent-e lessons, add the magic e (cap → cape) |
+| 👀 Sight Words | High-frequency words | Tap the sight words, then pop the bubble with the word you hear, or every bubble with that word |
+| 🧩 Spell It | 3. Write the words + 5. Dictation | Hear a word and tap the letters in order; the last words are dictation (no picture) |
+| 💬 Sentence | 4. Read a sentence | Read along, put the words back in order, then find the missing word |
 | 🎨 Draw | 6. Draw and label | Draw a picture and label it with a lesson word (drag the word to move it, tap it to take it off); the picture can be saved |
 
+- Questions change as the child plays: each round takes turns between question types, and it gets harder as it goes (the first two rounds have 3 choices, later rounds 4, with letters and words that look alike, such as b/d or map/mad; Spell It adds more extra letters).
 - A friendly lion (Leo) speaks every instruction out loud, so children don't need to read directions yet. Tap Leo to hear it again, or drag him anywhere on the screen (he remembers where; "Put Leo back" in Settings returns him to the corner).
 - Cheerful background music plays quietly and dips whenever Leo talks. Turn it off with "🎵 Music" at the bottom of the home screen or in Settings.
-- Leo's voice is pre-recorded (`audio/`, 600+ short MP3 clips), so it works in any browser: in-app browsers such as WeChat, Android phones without an English speech engine, and iPhones with the silent switch on.
+- Leo's voice is pre-recorded (`audio/`, 800+ short MP3 clips), so it works in any browser: in-app browsers such as WeChat, Android phones without an English speech engine, and iPhones with the silent switch on.
 - Children earn a ⭐ for each activity and an animal sticker 🏆 for each finished lesson.
 - **Parents page (👪)**: the Quick Parent Guide, voice speed, sound effects on/off, a sound test with tips if nothing plays, a "Refresh to latest version" button, a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons that ticks itself as the child plays and can be ticked by hand, and a "Reset progress" button (with a grown-up check).
 - Progress is saved in this browser on this device (localStorage). Nothing is sent anywhere.
