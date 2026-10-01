@@ -263,6 +263,7 @@ button{font-family:inherit;color:inherit}
 .trace-top .count{margin-left:6px;font-family:var(--font-ui);font-size:1.05rem;background:#fff;border-radius:999px;padding:.15em .7em;box-shadow:0 3px 0 var(--line);color:var(--ink-soft)}
 .trace-wrap{position:relative;width:min(100%,760px);height:clamp(230px,50vh,520px);background:#fff;border-radius:30px;box-shadow:0 8px 0 var(--line);overflow:hidden;touch-action:none}
 .trace-wrap canvas{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;touch-action:none}
+.trace-wrap canvas.marks{pointer-events:none}
 .trace-wrap.win{box-shadow:0 8px 0 #7fdcaa,0 0 0 6px #b8f5d4}
 
 /* drawing */
@@ -457,8 +458,8 @@ table.prog td.l small{color:var(--ink-soft)}
 <script>
 // Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
 // older clip list). tools/stamp.py writes both.
-var APP_VERSION = {n:23, date:'2026-10-01'};
-var AUDIO_VERSION = {manifest:'1a3dbabbbd', music:'7264c3b77d'};
+var APP_VERSION = {n:24, date:'2026-10-01'};
+var AUDIO_VERSION = {manifest:'c8954db9a8', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
 <script>
@@ -572,7 +573,8 @@ const T = {
   traceLetter:'Trace the letter with your finger! ✏️', traceWord:'Trace the word with your finger! ✏️',
   traceThis:'Trace this letter!', traceTheWord:'Trace the word:',
   traceLittle:'Trace the little letter!', traceLittleShow:'Trace the little letter! ✏️', traceBig:'Now trace the big letter!', traceBigShow:'Now trace the big letter! ✏️',
-  useFinger:'Use your finger to trace the letter! ☝️', stayOn:'Stay on the gray letter! 🙂', noScribble:'No scribbling! Trace the letter like writing.', keepGoing:'Keep going! Cover all of the gray letter. 🖍️',
+  howToTrace:'Start at the green dot and follow the arrows!', startDot:'Start at the green dot!', followArrow:'Follow the arrow!',
+  toTheEnd:'Keep going to the end of the arrow!',
   listenTap:'Listen, then tap the word you hear! 👂', findWord:'Find the word:',
   soundOut:'Tap a word. Sound it out, then read it! 📖',
   tapMagic:'Tap the magic e! ✨', thisSays:'This says:', magicE:'Magic e!',
@@ -589,7 +591,7 @@ const T = {
 };
 // What the bubble shows for a question (Leo says the matching line in T)
 const SHOW = {
-  noScribble:'No scribbling! Trace the letter like writing. ✏️',
+  startDot:'Start at the green dot! 🟢', followArrow:'Follow the arrow! ➡️', toTheEnd:'Keep going to the end of the arrow! ✏️',
   begin:'What sound does it start with? 🤔', whichSound:'Listen. Which sound do you hear? 👂', findLittle:'Find the little letter! 🔍',
   pictureWord:'Which word matches the picture? 🖼️', missingLetter:'Which letter is missing? 🧩',
   popAll:'Pop every bubble with the word! 🔵', missingWord:'Read the sentence. Which word is missing? 🤔',
@@ -1442,7 +1444,7 @@ function showParents(){
       h('p', {}, 'Practice 10–15 minutes at a time. Have the child say each sound, blend sounds into words, and then write the word. For silent-e lessons, compare the short-vowel word with the long-vowel word.'),
       h('ul', {},
         h('li', {}, '🔤 Sounds: “Say the sounds.” Tap the letter cards, then pop the balloon with the sound Leo says.'),
-        h('li', {}, '✏️ Trace: write each sound with a finger.'),
+        h('li', {}, '✏️ Trace: write each letter stroke by stroke, in the right order: start at the green dot (it shows the stroke’s number) and follow the arrows. “👀 Show me” shows how the letter is written.'),
         h('li', {}, '📖 Read Words / ✨ Magic e: “Read the words.” Sound out each word; in silent-e lessons compare cap → cape.'),
         h('li', {}, '👀 Sight Words: the high-frequency words for the lesson.'),
         h('li', {}, '🧩 Spell It: “Write the words” and “Dictation.” Hear a word and tap its letters in order.'),
@@ -1613,198 +1615,332 @@ function actSounds(ctx){
   }
 }
 
-// 2 · Trace: trace letters (or silent-e words) with a finger
-// Letters are traced little then big (t, T); review lessons trace up to six little letters; silent-e lessons trace words.
+// Trace items: letters are traced little then big (t, T); review lessons trace up to six little letters; silent-e lessons trace words.
 function traceItems(l){
   if (l.pairs) return l.pairs.map(p => p[1]).concat(l.words || []).slice(0, 5);
   if (l.sounds.length <= 3) return l.sounds.flatMap(x => [x, x.toUpperCase()]);
   return shuffle(l.sounds).slice(0, 6);
 }
-// Length of a letter's strokes: thin the letter's shape to 1-pixel lines (Zhang-Suen) and count the pixels.
-function skeletonLength(alpha, w, x0, x1, y0, y1){
-  const bw = x1 - x0 + 3, bh = y1 - y0 + 3, m = new Uint8Array(bw * bh);
-  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (alpha[(y * w + x) * 4 + 3] > 128) m[(y - y0 + 1) * bw + (x - x0 + 1)] = 1;
-  const del = [];
-  for (let changed = true, guard = 0; changed && guard < 200; guard++){
-    changed = false;
-    for (let step = 0; step < 2; step++){
-      del.length = 0;
-      for (let y = 1; y < bh - 1; y++) for (let x = 1; x < bw - 1; x++){
-        const i = y * bw + x;
-        if (!m[i]) continue;
-        const p = [m[i - bw], m[i - bw + 1], m[i + 1], m[i + bw + 1], m[i + bw], m[i + bw - 1], m[i - 1], m[i - bw - 1]];
-        const b = p[0] + p[1] + p[2] + p[3] + p[4] + p[5] + p[6] + p[7];
-        if (b < 2 || b > 6) continue;
-        let a = 0; for (let k = 0; k < 8; k++) if (!p[k] && p[(k + 1) % 8]) a++;
-        if (a !== 1) continue;
-        if (step === 0 ? (p[0] && p[2] && p[4]) || (p[2] && p[4] && p[6]) : (p[0] && p[2] && p[6]) || (p[0] && p[4] && p[6])) continue;
-        del.push(i);
+/* ---------- handwriting strokes for tracing ---------- */
+// Every letter is written stroke by stroke, in order, as in kindergarten handwriting (ball and stick).
+// Units: the top line is y = 0, the dashed middle line y = 1, the baseline y = 2, the line below y = 3.
+// Strokes are separated by "|", parts of one stroke by ",":
+//   l x y x y ...          straight lines through the points
+//   c cx cy r a0 a1        part of a circle from angle a0 to a1 (degrees: 0 = right, 90 = down; a1 < a0 goes counterclockwise)
+//   e cx cy rx ry a0 a1    the same for an oval
+//   d x y                  a dot (tap it)
+const STROKES = {
+  a:'c .5 1.5 .5 -20 -340 | l 1 1 1 2',           b:'l 0 0 0 2 | c .5 1.5 .5 180 530',
+  c:'c .5 1.5 .5 -40 -320',                        d:'c .5 1.5 .5 -20 -340 | l 1 0 1 2',
+  e:'l 0 1.5 1 1.5, c .5 1.5 .5 0 -315',           f:'c .65 .4 .35 -20 -180, l .3 .4 .3 2 | l 0 1 .75 1',
+  g:'c .5 1.5 .5 -20 -340 | l 1 1 1 2.55, c .55 2.55 .45 0 160',
+  h:'l 0 0 0 2 | c .45 1.45 .45 180 360, l .9 1.45 .9 2',
+  i:'l 0 1 0 2 | d 0 .45',                         j:'l .5 1 .5 2.6, c .1 2.6 .4 0 165 | d .5 .45',
+  k:'l 0 0 0 2 | l .8 1 .05 1.55 .85 2',           l:'l 0 0 0 2',
+  m:'l 0 1 0 2 | c .38 1.4 .38 180 360, l .76 1.4 .76 2 | c 1.14 1.4 .38 180 360, l 1.52 1.4 1.52 2',
+  n:'l 0 1 0 2 | c .45 1.45 .45 180 360, l .9 1.45 .9 2',
+  o:'c .5 1.5 .5 -90 -450',                        p:'l 0 1 0 3 | c .5 1.5 .5 180 530',
+  q:'c .5 1.5 .5 -20 -340 | l 1 1 1 3',            r:'l 0 1 0 2 | c .45 1.45 .45 180 300',
+  s:'e .42 1.25 .4 .25 -20 -270, e .42 1.75 .42 .25 -90 160',
+  t:'l .4 .25 .4 2 | l 0 1 .8 1',                  u:'l 0 1 0 1.55, c .45 1.55 .45 180 0, l .9 1.55 .9 1 | l .9 1 .9 2',
+  v:'l 0 1 .5 2 1 1',                              w:'l 0 1 .35 2 .7 1 1.05 2 1.4 1',
+  x:'l 0 1 1 2 | l 1 1 0 2',                       y:'l 0 1 .5 2 | l 1 1 .1 3',
+  z:'l 0 1 1 1 0 2 1 2',
+  A:'l .6 0 0 2 | l .6 0 1.2 2 | l .25 1.3 .95 1.3',
+  B:'l 0 0 0 2 | l 0 0 .5 0, e .5 .5 .45 .5 -90 90, l .5 1 0 1 | l 0 1 .55 1, e .55 1.5 .5 .5 -90 90, l .55 2 0 2',
+  C:'e .95 1 .95 1 -40 -320',                      D:'l 0 0 0 2 | l 0 0 .45 0, e .45 1 .8 1 -90 90, l .45 2 0 2',
+  E:'l 0 0 0 2 | l 0 0 1 0 | l 0 1 .8 1 | l 0 2 1 2', F:'l 0 0 0 2 | l 0 0 1 0 | l 0 1 .8 1',
+  G:'e .95 1 .95 1 -40 -360, l 1.9 1 1.2 1',       H:'l 0 0 0 2 | l 1.2 0 1.2 2 | l 0 1 1.2 1',
+  I:'l .5 0 .5 2 | l 0 0 1 0 | l 0 2 1 2',         J:'l 1 0 1 1.5, e .55 1.5 .45 .5 0 180',
+  K:'l 0 0 0 2 | l 1.05 0 .05 1.05 | l .35 .75 1.1 2', L:'l 0 0 0 2 1 2',
+  M:'l 0 0 0 2 | l 0 0 .75 1.4 1.5 0 1.5 2',       N:'l 0 0 0 2 | l 0 0 1.2 2 1.2 0',
+  O:'e .95 1 .95 1 -90 -450',                      P:'l 0 0 0 2 | l 0 0 .5 0, e .5 .5 .5 .5 -90 90, l .5 1 0 1',
+  Q:'e .95 1 .95 1 -90 -450 | l 1.15 1.45 1.75 2.1',
+  R:'l 0 0 0 2 | l 0 0 .5 0, e .5 .5 .5 .5 -90 90, l .5 1 0 1 | l .45 1 1.05 2',
+  S:'e .55 .5 .5 .5 -20 -270, e .55 1.5 .55 .5 -90 160',
+  T:'l .6 0 .6 2 | l 0 0 1.2 0',                   U:'l 0 0 0 1.4, e .6 1.4 .6 .6 180 0, l 1.2 1.4 1.2 0',
+  V:'l 0 0 .6 2 1.2 0',                            W:'l 0 0 .45 2 .9 .4 1.35 2 1.8 0',
+  X:'l 0 0 1.2 2 | l 1.2 0 0 2',                   Y:'l 0 0 .6 1 | l 1.2 0 .6 1 .6 2',
+  Z:'l 0 0 1.2 0 0 2 1.2 2',
+};
+function letterStrokes(ch){
+  return STROKES[ch].split('|').map(stroke => {
+    const parts = stroke.split(',').map(p => p.trim().split(/\s+/));
+    if (parts[0][0] === 'd') return {dot:true, pts:[[+parts[0][1], +parts[0][2]]]};
+    const pts = [];
+    for (const [kind, ...v] of parts){
+      const n = v.map(Number);
+      if (kind === 'l') for (let i = 0; i < n.length; i += 2) pts.push([n[i], n[i + 1]]);
+      else {
+        const [cx, cy, rx, ry, a0, a1] = kind === 'c' ? [n[0], n[1], n[2], n[2], n[3], n[4]] : n;
+        const steps = Math.max(2, Math.ceil(Math.abs(a1 - a0) / 6));
+        for (let i = 0; i <= steps; i++){ const a = (a0 + (a1 - a0) * i / steps) * Math.PI / 180; pts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]); }
       }
-      if (del.length){ changed = true; for (const i of del) m[i] = 0; }
     }
-  }
-  let n = 0; for (let i = 0; i < m.length; i++) n += m[i];
-  return n * 1.1;   // diagonal steps are a little longer than one pixel
+    return {dot:false, pts: pts.filter((p, i) => !i || Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) > 1e-6)};
+  });
 }
+// A letter or word, letter after letter: its strokes (in units) and its width
+function writeOut(text){
+  let x = 0;
+  const strokes = [];
+  for (const ch of text){
+    const ss = letterStrokes(ch), xs = ss.flatMap(s => s.pts.map(p => p[0]));
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    for (const s of ss) strokes.push({dot:s.dot, pts:s.pts.map(([px, py]) => [px - minX + x, py])});
+    x += maxX - minX + 0.6;
+  }
+  return {strokes, width: Math.max(0.3, x - 0.6)};
+}
+if (window.__quiz) window.__writeOut = writeOut;   // test hook
 
+// 2 · Trace: follow each stroke from its green dot along the arrows, in order (letters, or silent-e words)
 function actTrace(ctx){
   const l = ctx.lesson, items = traceItems(l).slice(0, isShort() ? 3 : 6);
-  let i = 0, fails = 0, won = false, drawing = false, last = null, hue = 260, travel = 0, skelLen = 1;
+  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i = 0, fails = 0, won = false, hue = 260;
   const wrap = h('div', {class:'trace-wrap'});
-  const guide = h('canvas', {'aria-hidden':'true'}), ink = h('canvas', {'aria-label':'Tracing area'});
-  wrap.append(guide, ink);
+  // three layers: the letter (bottom), the child's ink, and the dots, numbers and arrows on top (taps go through them)
+  const guide = h('canvas', {'aria-hidden':'true'}), ink = h('canvas', {'aria-label':'Tracing area'}), marks = h('canvas', {'aria-hidden':'true', class:'marks'});
+  wrap.append(guide, ink, marks);
   const topPic = h('span', {class:'tp'}), topLabel = h('span'), counter = h('span', {class:'count'});
-  const clearBtn = h('button', {class:'btn orange', onclick:() => { Sfx.tap(); clearInk(); }}, '🧽 Clear');
-  const doneBtn = h('button', {class:'btn green', onclick:() => check(true)}, '✔ Done');
-  ctx.stage.replaceChildren(h('div', {class:'trace-top'}, topPic, topLabel, counter), wrap, h('div', {class:'row'}, clearBtn, doneBtn));
+  const clearBtn = h('button', {class:'btn orange', onclick:() => { Sfx.tap(); restart(); }}, '🧽 Start again');
+  const showBtn = h('button', {class:'btn blue', onclick:() => { Sfx.tap(); demo(false); }}, '👀 Show me');
+  ctx.stage.replaceChildren(h('div', {class:'trace-top'}, topPic, topLabel, counter), wrap, h('div', {class:'row'}, showBtn, clearBtn));
 
-  let W = 0, H = 0, dpr = 1, gctx, ictx, brush = 20, size = 100, mask = [], tol = null, mw = 0, mh = 0, cellOf = null, cells = [];
-  const small = document.createElement('canvas');
-  const font = px => `700 ${px}px Andika, 'Comic Sans MS', 'Chalkboard SE', sans-serif`;
+  let W = 0, H = 0, dpr = 1, gctx, ictx, mctx, u = 50;
+  let shape = null, strokes = [];   // the current item's strokes in page pixels: {dot, pts, cum, L}
+  const cur = {k:0, prog:0};          // the stroke being traced, and how far along it (0..1)
+  let mode = null, last = null, offRun = 0, wander = 0, moved = 0, from = 0, lastHint = 0, demoRun = 0, demoView = null;   // demoView: {k, prog, x, y} while "Show me" plays
+
+  const tol = () => Math.max((fails >= 2 ? 0.5 : 0.36) * u, fails >= 2 ? 22 : 16);   // how far off the path still counts
+  const near = () => Math.max((fails >= 2 ? 0.6 : 0.45) * u, fails >= 2 ? 28 : 22);   // how close to a dot a finger must start
 
   function layout(){
     const r = wrap.getBoundingClientRect();
     if (!r.width || !r.height) return;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = Math.round(r.width); H = Math.round(r.height);
-    for (const c of [guide, ink]){ c.width = W * dpr; c.height = H * dpr; }
-    gctx = guide.getContext('2d');
-    ictx = ink.getContext('2d');
-    gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawGuide();
+    for (const c of [guide, ink, marks]){ c.width = W * dpr; c.height = H * dpr; }
+    gctx = guide.getContext('2d'); ictx = ink.getContext('2d'); mctx = marks.getContext('2d');
+    for (const c of [gctx, ictx, mctx]) c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    place(); draw();
   }
-  function drawGuide(done){
-    const text = items[i];
-    gctx.font = font(100);
-    const asc = gctx.measureText('l').actualBoundingBoxAscent || 75;
-    const desc = gctx.measureText('g').actualBoundingBoxDescent || 25;
-    const xh = gctx.measureText('x').actualBoundingBoxAscent || 50;
-    const wid = gctx.measureText(text).width || 60;
-    size = Math.min(H * 0.8 / ((asc + desc) / 100), W * 0.84 / (wid / 100));
-    const A = asc * size / 100, D = desc * size / 100, X = xh * size / 100;
-    const base = (H - (A + D)) / 2 + A, cx = W / 2;
-    gctx.clearRect(0, 0, W, H);
-    // handwriting lines: top, dashed middle, baseline
-    gctx.lineWidth = 3; gctx.lineCap = 'round';
-    gctx.strokeStyle = '#c7dcff'; gctx.setLineDash([]); hline(base - A);
-    gctx.setLineDash([14, 12]); hline(base - X);
-    gctx.setLineDash([]); gctx.strokeStyle = '#ffb3be'; hline(base);
-    gctx.strokeStyle = '#c7dcff'; hline(base + D);
-    // the letter to trace
-    gctx.font = font(size); gctx.textAlign = 'center'; gctx.textBaseline = 'alphabetic';
-    gctx.fillStyle = done ? '#bff3d8' : '#ebe7fc';
-    gctx.fillText(text, cx, base);
-    gctx.setLineDash([2, Math.max(6, size * 0.05)]);
-    gctx.lineWidth = Math.max(3, size * 0.014); gctx.strokeStyle = done ? '#22c07a' : '#a597ee';
-    gctx.strokeText(text, cx, base);
-    gctx.setLineDash([]);
-    // masks for checking (half resolution)
-    brush = Math.max(14, size * 0.12);
-    mw = Math.ceil(W / 2); mh = Math.ceil(H / 2);
-    const mc = document.createElement('canvas'); mc.width = mw; mc.height = mh;
-    const m = mc.getContext('2d', {willReadFrequently:true});
-    m.setTransform(0.5, 0, 0, 0.5, 0, 0);
-    m.font = font(size); m.textAlign = 'center'; m.textBaseline = 'alphabetic'; m.fillStyle = '#000';
-    m.fillText(text, cx, base);
-    const md = m.getImageData(0, 0, mw, mh).data;
-    m.lineJoin = 'round'; m.lineWidth = brush + size * 0.03; m.strokeStyle = '#000';   // how far off the letter still counts
-    m.strokeText(text, cx, base);
-    const td = m.getImageData(0, 0, mw, mh).data;
-    mask = []; tol = new Uint8Array(mw * mh);
-    for (let p = 0; p < mw * mh; p++){ if (md[p * 4 + 3] > 128) mask.push(p); if (td[p * 4 + 3] > 30) tol[p] = 1; }
-    // split the letter into small parts, so every part has to be traced (not just half of it)
-    let x0 = mw, x1 = 0, y0 = mh, y1 = 0;
-    for (const p of mask){ const x = p % mw, y = (p / mw) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-    const cellPx = Math.max(4, brush * 0.75);   // in mask pixels (half size), about 1.5 brush widths
-    const cols = Math.max(1, Math.ceil((x1 - x0 + 1) / cellPx)), rows = Math.max(1, Math.ceil((y1 - y0 + 1) / cellPx));
-    cellOf = new Int32Array(mask.length);
-    const counts = new Array(cols * rows).fill(0);
-    mask.forEach((p, k) => {
-      const cx = Math.min(cols - 1, Math.floor((p % mw - x0) / cellPx)), cy = Math.min(rows - 1, Math.floor((Math.floor(p / mw) - y0) / cellPx));
-      cellOf[k] = cx + cols * cy; counts[cellOf[k]]++;
+  // scale the item to the box: four handwriting lines (top, middle, base, below) fill most of the height
+  function place(){
+    if (!shape || !W) return;
+    u = Math.min(H * 0.86 / 3.3, W * 0.84 / (shape.width + 0.4));
+    const ox = (W - shape.width * u) / 2, oy = (H - 3 * u) / 2;
+    strokes = shape.strokes.map(s => {
+      const pts = s.pts.map(([x, y]) => [ox + x * u, oy + y * u]), cum = [0];
+      for (let j = 1; j < pts.length; j++) cum.push(cum[j - 1] + Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]));
+      return {dot:s.dot, pts, cum, L:cum[cum.length - 1]};
     });
-    const minPx = cellPx * cellPx * 0.08;   // ignore cells that only touch the letter's edge
-    cells = counts.map(n => n >= minPx ? n : 0);
-    skelLen = Math.max(1, skeletonLength(md, mw, x0, x1, y0, y1) * 2);   // in page pixels (the mask is half size)
-    small.width = mw; small.height = mh;
+    if (window.__quiz) window.__traceGuide = {strokes: strokes.map(s => ({dot:s.dot, pts:s.pts})), u, k:cur.k};   // test hook
   }
-  function hline(y){ gctx.beginPath(); gctx.moveTo(16, y); gctx.lineTo(W - 16, y); gctx.stroke(); }
-  function clearInk(){ travel = 0; if (ictx){ ictx.clearRect(0, 0, W, H); } }
-  function measure(){
-    const sc = small.getContext('2d', {willReadFrequently:true});
-    sc.clearRect(0, 0, mw, mh); sc.drawImage(ink, 0, 0, mw, mh);
-    const d = sc.getImageData(0, 0, mw, mh).data;
-    let cov = 0, inkN = 0, out = 0;
-    const hit = new Array(cells.length).fill(0);
-    mask.forEach((p, k) => { if (d[p * 4 + 3] > 30){ cov++; hit[cellOf[k]]++; } });
-    for (let p = 0; p < mw * mh; p++) if (d[p * 4 + 3] > 30){ inkN++; if (!tol[p]) out++; }
-    // parts: share of the letter's parts that are at least a third covered
-    let partsN = 0, partsHit = 0;
-    cells.forEach((n, c) => { if (n){ partsN++; if (hit[c] >= n / 3) partsHit++; } });
-    // spread: how much ink there is compared with the letter itself (scribbling makes it large)
-    // pen: how far the finger moved compared with the length of the letter's strokes (tracing once is about 1;
-    // scribbling over the letter is several times more)
-    return {coverage: mask.length ? cov / mask.length : 0, outside: inkN ? out / inkN : 0, inkN,
-      spread: mask.length ? inkN / mask.length : 0, parts: partsN ? partsHit / partsN : 0, pen: travel / skelLen};
+  const lines = () => { const oy = (H - 3 * u) / 2; return [oy, oy + u, oy + 2 * u, oy + 3 * u]; };
+  // the point at distance s along a stroke, and the direction there
+  function at(st, s){
+    s = Math.max(0, Math.min(st.L, s));
+    let j = 1; while (j < st.cum.length - 1 && st.cum[j] < s) j++;
+    const a = st.pts[j - 1], b = st.pts[j] || a, seg = (st.cum[j] - st.cum[j - 1]) || 1, t = (s - st.cum[j - 1]) / seg;
+    return {x:a[0] + (b[0] - a[0]) * t, y:a[1] + (b[1] - a[1]) * t, dx:(b[0] - a[0]) / seg, dy:(b[1] - a[1]) / seg};
   }
-  // Only a real trace passes: most of the letter covered, little ink off it, and no scribbling.
-  // After two tries that were not quite enough, it is a little kinder, but never lets a scribble through.
-  function check(pressed){
-    if (won || !mask.length) return;
-    const {coverage, outside, inkN, spread, parts, pen} = measure();
-    if (window.__traceStats) window.__traceStats.push({coverage, outside, spread, parts, pen});   // test hook
-    // messy: ink off the letter, or far more ink than letter (thin letters like j coloured in carefully reach about 2)
-    const kind = fails >= 2;
-    const messy = kind ? outside > 0.25 || spread > 2.6 || (spread > 2 && outside > 0.1)
-                       : outside > 0.2 || spread > 2.4 || (spread > 1.8 && outside > 0.08);
-    const scribble = pen > (kind ? 2.8 : 2.2);   // tracing once is 0.8-1.4; going over a part again is fine
-    const pass = !messy && !scribble && (kind ? coverage >= 0.5 && parts >= 0.72 : coverage >= 0.6 && parts >= 0.8);
-    if (pass){ success(); return; }
-    if (!pressed && !scribble) return;
-    fails++; Sfx.bad(); wiggle(wrap);
-    if (inkN === 0) say(T.useFinger);
-    else if (scribble){ say(SHOW.noScribble, T.noScribble); clearInk(); }   // start that one again
-    else if (messy){ say(T.stayOn); clearInk(); }
-    else say(T.keepGoing);
+  // the closest point of a stroke to p, looking only between distances s0 and s1 along it
+  function closest(st, p, s0, s1){
+    let best = {d:Infinity, s:s0};
+    for (let j = 1; j < st.pts.length; j++){
+      if (st.cum[j] < s0 || st.cum[j - 1] > s1) continue;
+      const a = st.pts[j - 1], b = st.pts[j], len = st.cum[j] - st.cum[j - 1];
+      if (!len) continue;
+      let t = ((p.x - a[0]) * (b[0] - a[0]) + (p.y - a[1]) * (b[1] - a[1])) / (len * len);
+      t = Math.max((s0 - st.cum[j - 1]) / len, Math.min((s1 - st.cum[j - 1]) / len, Math.max(0, Math.min(1, t))));
+      const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t, d = Math.hypot(p.x - x, p.y - y);
+      if (d < best.d) best = {d, s:st.cum[j - 1] + t * len};
+    }
+    return best;
+  }
+  function strokePath(c, st, s0 = 0, s1 = st.L){
+    c.beginPath();
+    const a = at(st, s0); c.moveTo(a.x, a.y);
+    for (let j = 1; j < st.pts.length; j++) if (st.cum[j] > s0 && st.cum[j] < s1) c.lineTo(st.pts[j][0], st.pts[j][1]);
+    const b = at(st, s1); c.lineTo(b.x, b.y);
+  }
+  function dotAt(c, x, y, r, fill){ c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fillStyle = fill; c.fill(); }
+  function draw(){
+    if (!gctx || !strokes.length) return;
+    let c = gctx;
+    const k = demoView ? demoView.k : cur.k, prog = demoView ? demoView.prog : cur.prog;
+    c.clearRect(0, 0, W, H); mctx.clearRect(0, 0, W, H);
+    // handwriting lines: top, dashed middle, baseline, bottom
+    const [t0, t1, t2, t3] = lines();
+    c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 3;
+    const hl = y => { c.beginPath(); c.moveTo(16, y); c.lineTo(W - 16, y); c.stroke(); };
+    c.strokeStyle = '#c7dcff'; c.setLineDash([]); hl(t0); c.setLineDash([14, 12]); hl(t1);
+    c.setLineDash([]); c.strokeStyle = '#ffb3be'; hl(t2); c.strokeStyle = '#c7dcff'; hl(t3);
+    const body = 0.3 * u;
+    strokes.forEach((st, j) => {
+      const done = won || j < k;
+      if (st.dot) dotAt(c, st.pts[0][0], st.pts[0][1], body * 0.62, done ? '#22c07a' : j === k ? '#d9d1fb' : '#ebe7fc');
+      else { strokePath(c, st); c.lineWidth = body; c.strokeStyle = done ? '#22c07a' : j === k ? '#d9d1fb' : '#ebe7fc'; c.stroke(); }
+    });
+    if (won) return;
+    const st = strokes[k];
+    if (!st) return;
+    // the part of this stroke already traced
+    if (!st.dot && prog > 0){ strokePath(c, st, 0, prog * st.L); c.lineWidth = body; c.strokeStyle = '#7fdcaa'; c.stroke(); }
+    // arrows, numbers and dots go on the top layer, above the child's ink
+    c = mctx; c.lineCap = 'round'; c.lineJoin = 'round';
+    if (!st.dot){
+      c.strokeStyle = '#7b61ff'; c.lineWidth = Math.max(2.5, u * 0.05);
+      const step = Math.max(0.55 * u, 26), a = Math.max(0.12 * u, 7);
+      for (let s = prog * st.L + step * 0.7; s < st.L - step * 0.25; s += step){
+        const p = at(st, s);
+        c.beginPath(); c.moveTo(p.x - a * (p.dx - p.dy * 0.8), p.y - a * (p.dy + p.dx * 0.8)); c.lineTo(p.x, p.y);
+        c.lineTo(p.x - a * (p.dx + p.dy * 0.8), p.y - a * (p.dy - p.dx * 0.8)); c.stroke();
+      }
+    }
+    // numbers at the start of the next two strokes
+    const R = Math.max(0.17 * u, 12);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let j = Math.min(strokes.length - 1, k + 2); j > k; j--){
+      const [x, y] = strokes[j].pts[0];
+      dotAt(c, x, y, R * 0.7, 'rgba(165,151,238,.55)');
+      c.fillStyle = '#fff'; c.font = `700 ${Math.round(R * 0.9)}px Fredoka, sans-serif`; c.fillText(String(j + 1), x, y + 1);
+    }
+    // the green start dot (or, after a break, a green dot where the finger stopped)
+    const [sx, sy] = st.pts[0];
+    if (prog > 0 && !st.dot){ const p = at(st, prog * st.L); dotAt(c, p.x, p.y, R * 0.75, '#22c07a'); }
+    dotAt(c, sx, sy, R, prog > 0 ? '#9fe6c1' : '#22c07a');
+    c.fillStyle = '#fff'; c.font = `700 ${Math.round(R * 1.15)}px Fredoka, sans-serif`; c.fillText(String(k + 1), sx, sy + 1);
+    // the "Show me" finger
+    if (demoView) dotAt(c, demoView.x, demoView.y, R * 0.9, 'rgba(255,176,46,.9)');
+  }
+  let drawQueued = false;
+  const redraw = () => { if (drawQueued) return; drawQueued = true; requestAnimationFrame(() => { drawQueued = false; draw(); }); };
+
+  // "Show me": a dot travels along every stroke in order (shown when a letter starts, unless the device asks for less motion)
+  function demo(auto){
+    const my = ++demoRun;
+    demoView = null;
+    if ((auto && calm) || !strokes.length){ redraw(); return; }
+    let j = 0, t0 = performance.now();
+    const tick = now => {
+      if (my !== demoRun || !ctx.alive()) return;
+      const st = strokes[j];
+      const f = Math.min(1, (now - t0) / (st.dot ? 350 : Math.max(450, st.L / u * 520)));
+      const p = st.dot ? {x:st.pts[0][0], y:st.pts[0][1]} : at(st, f * st.L);
+      demoView = {k:j, prog:st.dot ? 0 : f, x:p.x, y:p.y};
+      draw();
+      if (f >= 1 && ++j >= strokes.length){ demoView = null; draw(); return; }
+      if (f >= 1) t0 = now;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  const stopDemo = () => { demoRun++; if (demoView){ demoView = null; draw(); } };
+
+  function clearInk(){ if (ictx) ictx.clearRect(0, 0, W, H); }
+  function restart(){ stopDemo(); cur.k = 0; cur.prog = 0; mode = null; clearInk(); draw(); if (window.__traceGuide) window.__traceGuide.k = 0; }
+  function hint(text, speech){
+    if (Date.now() - lastHint < 2500) return;
+    lastHint = Date.now(); Sfx.bad(); wiggle(wrap); say(text, speech);
+  }
+  function fail(text, speech){ fails++; mode = null; clearInk(); hint(text, speech); draw(); }
+  function strokeDone(){
+    cur.k++; cur.prog = 0; offRun = 0; Sfx.tick(cur.k); clearInk();
+    if (window.__traceGuide) window.__traceGuide.k = cur.k;
+    if (cur.k >= strokes.length){ mode = null; success(); return; }
+    mode = 'between';   // the finger may stay down and move on to the next stroke
+    draw();
   }
   function success(){
-    won = true; Sfx.good(); wrap.classList.add('win'); burst(wrap); drawGuide(true);
+    won = true; Sfx.good(); wrap.classList.add('win'); burst(wrap); draw();
     const text = items[i];
     ctx.progress((i + 1) / items.length);
     const pr = pick(PRAISE);
     afterSay(say(pr, [pr, text.length === 1 ? soundName(text.toLowerCase()) : text]), 1300, () => { i++; if (i >= items.length) ctx.done(); else startItem(); });
   }
   function startItem(){
-    won = false; fails = 0; wrap.classList.remove('win');
+    won = false; fails = 0; cur.k = 0; cur.prog = 0; mode = null; wrap.classList.remove('win');
     const text = items[i];
+    shape = writeOut(text);
     const isLetter = text.length === 1, key = text.toLowerCase(), big = isLetter && text !== key;
     topPic.textContent = isLetter ? SOUND[key][1] : (PIC[text] || '✨');
     topLabel.textContent = isLetter ? `${text}  ·  ${SOUND[key][0]}` : text;
     counter.textContent = `${i + 1} / ${items.length}`;
-    clearInk(); if (W) drawGuide();
+    clearInk(); place(); draw();
     ctx.progress(i / items.length);
     const pairs = items.some(x => x.length === 1 && x !== x.toLowerCase());   // little and big letters
-    const prompt = () => !isLetter ? say(T.traceWord, [T.traceTheWord, text])
-      : big ? say(T.traceBigShow, [T.traceBig, soundSay(key)])
-      : pairs ? say(T.traceLittleShow, [T.traceLittle, soundSay(key)])
-      : say(T.traceLetter, [T.traceThis, soundSay(key)]);
+    const how = i === 0 ? [T.howToTrace] : [];
+    const prompt = () => {
+      demo(true);
+      return !isLetter ? say(T.traceWord, [T.traceTheWord, text, ...how])
+        : big ? say(T.traceBigShow, [T.traceBig, soundSay(key), ...how])
+        : pairs ? say(T.traceLittleShow, [T.traceLittle, soundSay(key), ...how])
+        : say(T.traceLetter, [T.traceThis, soundSay(key), ...how]);
+    };
     ctx.replay = prompt; prompt();
   }
 
-  function seg(a, b){
+  function ink1(a, b){
     hue = (hue + 3) % 360;
-    ictx.strokeStyle = `hsl(${hue}, 85%, 55%)`; ictx.lineWidth = brush; ictx.lineCap = 'round'; ictx.lineJoin = 'round';
+    ictx.strokeStyle = `hsl(${hue}, 85%, 55%)`; ictx.lineWidth = 0.24 * u; ictx.lineCap = 'round'; ictx.lineJoin = 'round';
     ictx.beginPath(); ictx.moveTo(a.x, a.y); ictx.lineTo(b.x, b.y); ictx.stroke();
   }
+  // is p on a stroke that is already traced? (the finger may slide along those to the next stroke)
+  const onDone = p => strokes.slice(0, cur.k).some(st => st.dot ? Math.hypot(p.x - st.pts[0][0], p.y - st.pts[0][1]) < near() : closest(st, p, 0, st.L).d <= tol());
+  // start (or carry on) the current stroke if p is at its green dot, or where the finger stopped
+  function begin(p){
+    const st = strokes[cur.k];
+    if (st.dot){ if (Math.hypot(p.x - st.pts[0][0], p.y - st.pts[0][1]) <= near()){ strokeDone(); return true; } return false; }
+    const head = at(st, cur.prog * st.L);
+    if (Math.hypot(p.x - head.x, p.y - head.y) <= near()){ mode = 'trace'; offRun = 0; moved = 0; from = cur.prog * st.L; return true; }
+    return false;
+  }
+  function follow(p){
+    const st = strokes[cur.k], s = cur.prog * st.L;
+    // zigzagging along the stroke: the finger moves far more than it gets along (counted once it is under way)
+    if (s > from) moved += Math.hypot(p.x - last.x, p.y - last.y);
+    if (moved > 3 * (s - from) + 0.8 * u){ fail(SHOW.followArrow, T.followArrow); return; }
+    const c = closest(st, p, Math.max(0, s - 0.5 * u), Math.min(st.L, s + 1.1 * u));
+    if (c.d <= tol()){
+      offRun = 0;
+      if (c.s > s){ cur.prog = c.s / st.L; redraw(); }
+      if (cur.prog * st.L >= st.L - Math.min(0.3 * u, 0.2 * st.L)) strokeDone();
+    } else {
+      offRun += Math.hypot(p.x - last.x, p.y - last.y);
+      if (offRun > 0.6 * u) fail(SHOW.followArrow, T.followArrow);   // off the path, or the wrong way
+    }
+  }
   onStrokes(ink, {
-    down: p => { if (won || !ictx) return false; drawing = true; last = p; seg(p, {x:p.x + 0.1, y:p.y}); },
-    move: p => { if (!drawing) return; travel += Math.hypot(p.x - last.x, p.y - last.y); seg(last, p); last = p; },
-    up: () => { if (!drawing) return; drawing = false; check(false); },
+    down: p => {
+      if (won || !ictx || !strokes.length) return false;
+      stopDemo(); last = p; wander = 0;
+      if (begin(p) || (cur.k > 0 && onDone(p))){ if (!mode && !won) mode = 'between'; if (mode) ink1(p, {x:p.x + 0.1, y:p.y}); }
+      else { mode = null; hint(SHOW.startDot, T.startDot); draw(); }   // nothing is drawn: start at the green dot
+    },
+    move: p => {
+      if (!mode || won){ last = p; return; }
+      ink1(last, p);
+      if (mode === 'trace') follow(p);
+      else if (mode === 'between' && !begin(p) && !onDone(p)){
+        // running on past the end of a finished stroke is fine: the line just stops
+        wander += Math.hypot(p.x - last.x, p.y - last.y);
+        if (wander > 0.6 * u) mode = null;
+      }
+      last = p;
+    },
+    up: () => {
+      if (won || mode !== 'trace'){ mode = null; return; }
+      mode = null;
+      if (cur.prog >= 0.8) strokeDone();
+      else if (cur.prog > 0.05){ say(SHOW.toTheEnd, T.toTheEnd); draw(); }   // carry on from the green dot where the finger stopped
+    },
   });
   const resized = () => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); };
-  const fontReady = document.fonts && document.fonts.load ? Promise.race([document.fonts.load(font(100)), wait(2500)]) : Promise.resolve();
-  fontReady.catch(() => {}).then(() => { if (!ctx.alive()) return; watchSize(wrap, resized); layout(); });
+  watchSize(wrap, resized);
+  layout();
   startItem();
 }
 

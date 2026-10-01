@@ -14,7 +14,7 @@ Each lesson has 7 short activities that follow the workbook page:
 | Activity | Workbook section | What the child does |
 |---|---|---|
 | 🔤 Sounds | 1. Say the sounds | Tap the letter cards to hear them, then pop balloons: the letter Leo says, the first sound of a picture (🐶 → d), the little letter for a big one (M → m), and in silent-e lessons whether a word has the short or the long vowel (cap → a, cape → a_e) |
-| ✏️ Trace | Write each sound | Trace the little and the big letter (or the silent-e word) with a finger; a counter shows how many are left, and only a real trace passes: not half a letter, and not scribbling over it (the finger may travel only about twice the length of the letter's strokes) |
+| ✏️ Trace | Write each sound | Trace the little and the big letter (or the silent-e word) stroke by stroke, in the right order: start at the green dot, follow the arrows; a stroke started in the wrong place, traced the wrong way or scribbled does not count. "👀 Show me" shows how the letter is written; a counter shows how many are left |
 | 📖 Read Words / ✨ Magic e | 2. Read the words | Sound out each word, then pick the word you hear, the word that matches a picture, or the missing vowel (d_g); in silent-e lessons, add the magic e (cap → cape) |
 | 👀 Sight Words | High-frequency words | Tap the sight words, then pop the bubble with the word you hear, or every bubble with that word |
 | 🧩 Spell It | 3. Write the words + 5. Dictation | Hear a word and tap the letters in order; the last words are dictation (no picture) |
@@ -64,6 +64,10 @@ python3 tools/build_audio.py kokoro-v1.0.onnx voices-v1.0.bin   # records new cl
 `build_audio.py` (and `make_music.py`) finish by running `tools/stamp.py`, which writes the new file versions into `index.html`, so browsers never mix a new page with an old clip list.
 
 The model files come from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0). To re-record specific lines, add `--redo "phrase one" "phrase two"`; `--all` re-records everything. Every clip is levelled to the same loudness (set by `LOUDNESS_DB` in `tools/build_audio.py`); after changing it, `python3 tools/build_audio.py --relevel` re-levels the existing clips without recording them again (needs `pip install av`). Any line without a clip falls back to the browser's built-in speech.
+
+## Letter shapes for tracing
+
+The letters to trace are drawn from stroke data (`STROKES` in `index.html`), in the kindergarten "ball and stick" style: each stroke has its start, direction and place in the order (for example `t`: down first, then across). Each stroke is a short description on the four handwriting lines (y = 0 top line, 1 dashed middle line, 2 baseline, 3 bottom line): `l` straight lines through points, `c` and `e` parts of circles and ovals, `d` a dot.
 
 ## Site icon
 
