@@ -885,7 +885,7 @@ const Sfx = {
     osc.frequency.setValueAtTime(freq, t);
     if (o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur);
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime((o.vol || 0.18) * 1.4, t + 0.015);   // phones play quietly
+    g.gain.exponentialRampToValueAtTime((o.vol || 0.18) * 2, t + 0.015);   // phones play quietly
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     osc.connect(g); g.connect(c.destination);
     osc.start(t); osc.stop(t + dur + 0.05);
@@ -902,7 +902,7 @@ const Sfx = {
 /* ---------- background music: audio/music.mp3, an original loop made by tools/make_music.py ---------- */
 const Music = {
   buf: null, src: null, master: null, loading: null, ducked: false, undock: null,
-  level(){ return this.ducked ? 0.05 : 0.17; },
+  level(){ return this.ducked ? 0.06 : 0.22; },
   load(){
     const c = Sfx.ensure();
     if (!c || this.buf) return null;
