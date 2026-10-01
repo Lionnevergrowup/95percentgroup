@@ -38,7 +38,7 @@ Each lesson has 7 short activities that follow the workbook page:
 
 ## Deploy with GitHub Pages
 
-This is a static site: `index.html`, plus the `fonts/` and `audio/` folders. There is no build step.
+This is a static site: `index.html`, `favicon.ico` and `manifest.webmanifest`, plus the `fonts/`, `audio/` and `icons/` folders. There is no build step.
 
 1. Open the repository on GitHub → **Settings** → **Pages**.
 2. Under **Build and deployment**, set **Source** to **Deploy from a branch**.
@@ -63,6 +63,10 @@ python3 tools/build_audio.py kokoro-v1.0.onnx voices-v1.0.bin   # records new cl
 `build_audio.py` (and `make_music.py`) finish by running `tools/stamp.py`, which writes the new file versions into `index.html`, so browsers never mix a new page with an old clip list.
 
 The model files come from the [kokoro-onnx releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0). To re-record specific lines, add `--redo "phrase one" "phrase two"`; `--all` re-records everything. Every clip is levelled to the same loudness (set by `LOUDNESS_DB` in `tools/build_audio.py`); after changing it, `python3 tools/build_audio.py --relevel` re-levels the existing clips without recording them again (needs `pip install av`). Any line without a clip falls back to the browser's built-in speech.
+
+## Site icon
+
+The icon (Leo the lion) is drawn in `icons/icon.svg` and used for the browser tab. `NODE_PATH=$(npm root -g) node tools/make_icons.js` draws the other sizes from it: `favicon.ico` (16, 32, 48 px; the 16 px one has bigger eyes and fewer details so it still reads), the iPhone home-screen icon and the Android icons. After changing the icon, raise the `?v=` number on the icon links in `index.html` and `manifest.webmanifest`, so browsers fetch the new one.
 
 ## Background music
 
