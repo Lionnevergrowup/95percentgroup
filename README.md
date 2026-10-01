@@ -34,7 +34,7 @@ Each lesson has 7 short activities that follow the workbook page:
 - Turn the volume up. If there is still no sound, open the page in the phone's normal browser (in WeChat: tap "…" → "Open in browser") and check that no Bluetooth speaker or headphones are connected.
 - Practice 10–15 minutes at a time.
 - You can add the page to your home screen (Share → Add to Home Screen) so it opens like an app.
-- After an update, tap 🔄 (top right of the home screen) to force the newest version to load.
+- The version number ("Version 21 · 2026-10-01") is shown at the bottom of the home screen, on the start screen and on the Parents page. When a newer version is online, the home screen shows "🔄 New version … is ready. Tap to update!". You can also tap 🔄 (top right of the home screen) at any time to load the newest version.
 
 ## Deploy with GitHub Pages
 
@@ -46,6 +46,8 @@ This is a static site: `index.html`, plus the `fonts/` and `audio/` folders. The
 4. After about a minute the game is live at `https://lionnevergrowup.github.io/95percentgroup/`.
 
 To run it locally, run `python3 -m http.server` in this folder and visit http://localhost:8000.
+
+Before each commit, run `python3 tools/stamp.py`. It raises the version number by one (once per commit) and records the versions of the audio files, so browsers never mix a new page with old clips.
 
 ## Changing what Leo says
 

@@ -293,6 +293,9 @@ button{font-family:inherit;color:inherit}
 .panel-card h2{margin:0 0 10px;font-size:1.35rem}
 .panel-card p,.panel-card li{font-size:1.05rem;line-height:1.55;font-family:system-ui,-apple-system,'Segoe UI',sans-serif}
 .panel-card .note{color:var(--ink-soft)}
+.version{font-size:.95rem;color:var(--ink-soft);text-align:center;margin:18px 0 6px}
+.update-slot{display:flex;justify-content:center;margin:4px 0 12px}
+.update-slot:empty{display:none}
 .panel-card ul{padding-left:1.2em;margin:6px 0}
 .seg{display:inline-flex;flex-wrap:wrap;gap:8px}
 .seg button{border:0;border-radius:14px;padding:.45em .9em;font-size:1.05rem;font-weight:600;background:#f1eefc;cursor:pointer;min-height:44px}
@@ -371,7 +374,8 @@ table.prog td.l small{color:var(--ink-soft)}
 @media (max-width:560px){
   .act-head .act-title .nm{display:none}
   .act-grid{grid-template-columns:repeat(2,1fr);gap:16px 12px}
-  .lesson-grid{grid-template-columns:repeat(3,1fr);gap:16px 12px}
+  .lesson-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 10px}
+  .lesson-btn{min-height:0}   /* three across fit even a 320px screen */
   .icon-btn{width:46px;height:46px;font-size:1.3rem}
   .topbar{gap:7px}
   .brand .logo{display:none}
@@ -442,7 +446,9 @@ table.prog td.l small{color:var(--ink-soft)}
 <main id="app"></main>
 <noscript><p style="padding:24px;font-size:1.3rem">Please turn on JavaScript to play Phonics Fun.</p></noscript>
 <script>
-// Versions of the audio files, filled in by tools/stamp.py, so a page never uses an older clip list.
+// Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
+// older clip list). tools/stamp.py writes both.
+var APP_VERSION = {n:21, date:'2026-10-01'};
 var AUDIO_VERSION = {manifest:'ce2b282908', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
@@ -1204,13 +1210,15 @@ function showHome(quiet){
       h('button', {class:'icon-btn', 'aria-label':'My stickers', onclick:() => { Sfx.tap(); go('#/stickers'); }}, '🏆'),
       h('button', {class:'icon-btn', 'aria-label':'For parents', onclick:() => { Sfx.tap(); go('#/parents'); }}, '👪'),
       h('button', {class:'icon-btn', 'aria-label':'Refresh to the latest version', title:'Refresh', onclick:() => forceRefresh()}, '🔄')),
+    updateSlot,
     groups.map(([title, a, b]) => [
       h('h2', {class:'section-title'}, title),
       h('div', {class:'lesson-grid'}, LESSONS.slice(a - 1, b).map(l => lessonBtn(l, l === next))),
     ]),
     h('div', {class:'row', style:{marginTop:'28px'}},
       h('button', {class:'btn white', onclick:() => { Sfx.tap(); go('#/start'); }}, '🏁 Start screen'),
-      musicButton())
+      musicButton()),
+    h('p', {class:'version'}, versionText())
   );
   if (quiet) return;
   const line = next && next.n > 1 ? P.playLesson(next.n) : T.pickLesson;
@@ -1244,6 +1252,7 @@ function showStart(){
       if (greet) say(T.greetShow, greet).then(() => { if (lastSay && lastSay.speech === greet) route(); });
       else route();
     }}, '▶ Play')),
+    h('p', {class:'version'}, versionText()),
   ], 'splash');
 }
 
@@ -1429,7 +1438,9 @@ function showParents(){
         h('button', {class:'btn blue', onclick:() => soundCheck()}, '🔊 Test sound'), soundStatus),
       h('p', {class:'note'}, 'No sound? Turn the volume up. If the page is open inside an app such as WeChat, open it in the phone’s browser instead (tap “…” → “Open in browser”). If Bluetooth headphones or a speaker are connected, the sound plays there.'),
       h('div', {class:'setting'}, h('label', {}, 'Update'),
-        h('button', {class:'btn teal', onclick:() => forceRefresh()}, '🔄 Refresh to latest version'))),
+        h('button', {class:'btn teal', onclick:() => forceRefresh()}, '🔄 Refresh to latest version'),
+        h('span', {class:'note'}, 'This page: ' + versionText())),
+      updateSlot),
     h('section', {class:'panel-card'},
       h('h2', {}, 'Parent/teacher check'),
       h('div', {class:'table-wrap'}, h('table', {class:'prog'},
@@ -2306,6 +2317,21 @@ function actDraw(ctx){
   layout();
 }
 
+/* ---------- version ---------- */
+const versionText = () => `Version ${APP_VERSION.n} · ${APP_VERSION.date}`;
+// Shown on the home and parents screens when the server has a newer version than this page.
+const updateSlot = h('div', {class:'update-slot', role:'status'});
+let lastCheck = 0;
+function checkUpdate(){
+  if (!window.fetch || Date.now() - lastCheck < 10 * 60 * 1000) return;   // at most every 10 minutes
+  lastCheck = Date.now();
+  fetch('index.html?check=' + Date.now(), {cache:'no-store'}).then(r => r.ok ? r.text() : '').then(t => {
+    const m = /var APP_VERSION = \{n:(\d+), date:'([^']*)'\}/.exec(t);
+    if (m && +m[1] > APP_VERSION.n) updateSlot.replaceChildren(
+      h('button', {class:'btn orange', onclick:() => forceRefresh()}, `🔄 New version ${m[1]} is ready. Tap to update!`));
+  }).catch(() => {});
+}
+
 /* ---------- force refresh ---------- */
 async function forceRefresh(){
   Speech.stop();
@@ -2366,9 +2392,10 @@ const activateAudio = () => {
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, activateAudio, true));
 if (/[?&]v=\d+/.test(location.search)) try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
 window.addEventListener('hashchange', route);
-document.addEventListener('visibilitychange', () => { if (document.hidden){ Speech.stop(); Music.stop(); } else Music.start(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden){ Speech.stop(); Music.stop(); } else { Music.start(); checkUpdate(); } });
 route();
 if (!/^#\/(parents|start)/.test(location.hash)) showStart();   // #/start shows it via route()
+checkUpdate();
 })();
 </script>
 </body>
