@@ -472,7 +472,7 @@ table.prog td.l small{color:var(--ink-soft)}
 <script>
 // Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
 // older clip list). tools/stamp.py writes both.
-var APP_VERSION = {n:25, date:'2026-10-02'};
+var APP_VERSION = {n:26, date:'2026-10-02'};
 var AUDIO_VERSION = {manifest:'5f1d0492e8', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
@@ -1834,7 +1834,7 @@ function actTrace(ctx){
   let W = 0, H = 0, dpr = 1, gctx, ictx, mctx, u = 50;
   let shape = null, strokes = [];   // the current item's strokes in page pixels: {dot, pts, cum, L}
   const cur = {k:0, prog:0};          // the stroke being traced, and how far along it (0..1)
-  let mode = null, last = null, offRun = 0, wander = 0, moved = 0, from = 0, lastHint = 0, demoRun = 0, demoView = null;   // demoView: {k, prog, x, y} while "Show me" plays
+  let mode = null, last = null, offRun = 0, wander = 0, moved = 0, went = 0, from = 0, chained = false, lastHint = 0, demoRun = 0, demoView = null;   // demoView: {k, prog, x, y} while "Show me" plays
 
   const tol = () => Math.max((fails >= 2 ? 0.5 : 0.36) * u, fails >= 2 ? 22 : 16);   // how far off the path still counts
   const near = () => Math.max((fails >= 2 ? 0.6 : 0.45) * u, fails >= 2 ? 28 : 22);   // how close to a dot a finger must start
@@ -1923,17 +1923,29 @@ function actTrace(ctx){
         c.lineTo(p.x - a * (p.dx + p.dy * 0.8), p.y - a * (p.dy - p.dx * 0.8)); c.stroke();
       }
     }
-    // numbers at the start of the next two strokes
+    // numbers at the start of the next two strokes; when a start is shared (A, E: strokes 1 and 2 start at the
+    // same corner) the number moves a little way along its own stroke, so it is never hidden under the green dot
     const R = Math.max(0.17 * u, 12);
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    for (let j = Math.min(strokes.length - 1, k + 2); j > k; j--){
-      const [x, y] = strokes[j].pts[0];
-      dotAt(c, x, y, R * 0.7, 'rgba(165,151,238,.55)');
-      c.fillStyle = '#fff'; c.font = `700 ${Math.round(R * 0.9)}px Fredoka, sans-serif`; c.fillText(String(j + 1), x, y + 1);
-    }
-    // the green start dot (or, after a break, a green dot where the finger stopped)
     const [sx, sy] = st.pts[0];
-    if (prog > 0 && !st.dot){ const p = at(st, prog * st.L); dotAt(c, p.x, p.y, R * 0.75, '#22c07a'); }
+    const marks = [{n:k + 1, x:sx, y:sy, r:R}];
+    const resume = !st.dot && prog * st.L > R * 1.8;   // the "carry on here" dot, once it is clear of the start dot
+    if (resume){ const p = at(st, prog * st.L); marks.push({n:0, x:p.x, y:p.y, r:R * 0.75}); }
+    const clear = (x, y, r) => marks.every(m => Math.hypot(m.x - x, m.y - y) >= m.r + r + 2);
+    const next = [];
+    for (let j = k + 1; j <= Math.min(strokes.length - 1, k + 2); j++){
+      const sj = strokes[j], r = R * 0.7;
+      let [x, y] = sj.pts[0];
+      if (!sj.dot) for (let d = r; !clear(x, y, r) && d <= sj.L * 0.7; d += r * 0.5){ const q = at(sj, d); x = q.x; y = q.y; }
+      marks.push({n:j + 1, x, y, r}); next.push({n:j + 1, x, y, r});
+    }
+    for (const m of next.reverse()){
+      dotAt(c, m.x, m.y, m.r, 'rgba(165,151,238,.75)');
+      c.fillStyle = '#fff'; c.font = `700 ${Math.round(R * 0.9)}px Fredoka, sans-serif`; c.fillText(String(m.n), m.x, m.y + 1);
+    }
+    if (window.__traceGuide) window.__traceGuide.marks = marks;   // test hook
+    // the green start dot (or, after a break, a green dot where the finger stopped)
+    if (resume){ const p = at(st, prog * st.L); dotAt(c, p.x, p.y, R * 0.75, '#22c07a'); }
     dotAt(c, sx, sy, R, prog > 0 ? '#9fe6c1' : '#22c07a');
     c.fillStyle = '#fff'; c.font = `700 ${Math.round(R * 1.15)}px Fredoka, sans-serif`; c.fillText(String(k + 1), sx, sy + 1);
     // the "Show me" finger
@@ -2014,17 +2026,28 @@ function actTrace(ctx){
   // is p on a stroke that is already traced? (the finger may slide along those to the next stroke)
   const onDone = p => strokes.slice(0, cur.k).some(st => st.dot ? Math.hypot(p.x - st.pts[0][0], p.y - st.pts[0][1]) < near() : closest(st, p, 0, st.L).d <= tol());
   // start (or carry on) the current stroke if p is at its green dot, or where the finger stopped
-  function begin(p){
+  // chain: the finger slid here along a finished stroke; it only counts as starting once it moves along the new one
+  function begin(p, chain){
     const st = strokes[cur.k];
     if (st.dot){ if (Math.hypot(p.x - st.pts[0][0], p.y - st.pts[0][1]) <= near()){ strokeDone(); return true; } return false; }
     const head = at(st, cur.prog * st.L);
-    if (Math.hypot(p.x - head.x, p.y - head.y) <= near()){ mode = 'trace'; offRun = 0; moved = 0; from = cur.prog * st.L; return true; }
+    if (Math.hypot(p.x - head.x, p.y - head.y) <= near()){ mode = 'trace'; offRun = 0; moved = 0; went = 0; from = cur.prog * st.L; chained = !!chain; return true; }
     return false;
   }
+  // going the wrong way (or not along the stroke at all): after a slide from a finished stroke, just carry on sliding
+  function wrongWay(){
+    const st = strokes[cur.k];
+    if (chained && cur.prog * st.L - from < 0.12 * u){ cur.prog = from / st.L; mode = 'between'; redraw(); return; }
+    fail(SHOW.followArrow, T.followArrow);
+  }
   function follow(p){
-    const st = strokes[cur.k], s = cur.prog * st.L;
+    const st = strokes[cur.k], s = cur.prog * st.L, step = Math.hypot(p.x - last.x, p.y - last.y);
+    // the wrong way from the dot: the finger has gone a fair way but the stroke has not moved on
+    went += step;
+    if (s - from >= 0.12 * u) chained = false;   // under way: this is the new stroke
+    if (went > 0.65 * u && s - from < 0.12 * u){ wrongWay(); return; }
     // zigzagging along the stroke: the finger moves far more than it gets along (counted once it is under way)
-    if (s > from) moved += Math.hypot(p.x - last.x, p.y - last.y);
+    if (s > from) moved += step;
     if (moved > 3 * (s - from) + 0.8 * u){ fail(SHOW.followArrow, T.followArrow); return; }
     const c = closest(st, p, Math.max(0, s - 0.5 * u), Math.min(st.L, s + 1.1 * u));
     if (c.d <= tol()){
@@ -2033,21 +2056,21 @@ function actTrace(ctx){
       if (cur.prog * st.L >= st.L - Math.min(0.3 * u, 0.2 * st.L)) strokeDone();
     } else {
       offRun += Math.hypot(p.x - last.x, p.y - last.y);
-      if (offRun > 0.6 * u) fail(SHOW.followArrow, T.followArrow);   // off the path, or the wrong way
+      if (offRun > 0.6 * u) wrongWay();   // off the path, or the wrong way
     }
   }
   onStrokes(ink, {
     down: p => {
       if (won || !ictx || !strokes.length) return false;
       stopDemo(); last = p; wander = 0;
-      if (begin(p) || (cur.k > 0 && onDone(p))){ if (!mode && !won) mode = 'between'; if (mode) ink1(p, {x:p.x + 0.1, y:p.y}); }
+      if (begin(p) || (cur.k > 0 && onDone(p) && !begin(p, true))){ if (!mode && !won) mode = 'between'; if (mode) ink1(p, {x:p.x + 0.1, y:p.y}); }
       else { mode = null; hint(SHOW.startDot, T.startDot); draw(); }   // nothing is drawn: start at the green dot
     },
     move: p => {
       if (!mode || won){ last = p; return; }
       ink1(last, p);
       if (mode === 'trace') follow(p);
-      else if (mode === 'between' && !begin(p) && !onDone(p)){
+      else if (mode === 'between' && !begin(p, true) && !onDone(p)){
         // running on past the end of a finished stroke is fine: the line just stops
         wander += Math.hypot(p.x - last.x, p.y - last.y);
         if (wander > 0.6 * u) mode = null;
@@ -2055,9 +2078,12 @@ function actTrace(ctx){
       last = p;
     },
     up: () => {
-      if (won || mode !== 'trace'){ mode = null; return; }
+      // a line that did not trace anything (slid on past a finished stroke, or wandered off) does not stay
+      if (won || mode !== 'trace'){ mode = null; if (!won) clearInk(); return; }
       mode = null;
+      const st = strokes[cur.k], gained = cur.prog * st.L - from;
       if (cur.prog >= 0.8) strokeDone();
+      else if (gained < 0.15 * u && went > 0.3 * u){ if (chained){ cur.prog = from / st.L; draw(); } else fail(SHOW.followArrow, T.followArrow); }   // a short pull the wrong way: wipe it
       else if (cur.prog > 0.05){ say(SHOW.toTheEnd, T.toTheEnd); draw(); }   // carry on from the green dot where the finger stopped
     },
   });
