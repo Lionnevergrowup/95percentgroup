@@ -13,7 +13,7 @@ Each lesson has 7 short activities that follow the workbook page:
 
 | Activity | Workbook section | What the child does |
 |---|---|---|
-| 🔤 Sounds | 1. Say the sounds | Tap the letter cards to hear them, then pop balloons: the letter Leo says, the first sound of a picture (🐶 → d), the little letter for a big one (M → m), and in silent-e lessons whether a word has the short or the long vowel (cap → a, cape → a_e) |
+| 🔤 Sounds | 1. Say the sounds | Tap the letter cards to hear them, then pop balloons: the letter Leo says, the first sound of a picture (🐶 → d), the little letter for a big one (M → m), and in silent-e lessons whether a word has the short or the long vowel (cap → a, cape → a_e). Last comes sound sorting: drag each picture into the box for its first sound (t, p, n, a …), or in silent-e lessons each word into the box for its vowel (a or a_e) |
 | ✏️ Trace | Write each sound | Trace the little and the big letter (or the silent-e word) stroke by stroke, in the right order: start at the green dot, follow the arrows; a stroke started in the wrong place, traced the wrong way or scribbled does not count. "👀 Show me" shows how the letter is written; a counter shows how many are left |
 | 📖 Read Words / ✨ Magic e | 2. Read the words | Sound out each word, then pick the word you hear, the word that matches a picture, or the missing vowel (d_g); in silent-e lessons, add the magic e (cap → cape) |
 | 👀 Sight Words | High-frequency words | Tap the sight words, then pop the bubble with the word you hear, or every bubble with that word |

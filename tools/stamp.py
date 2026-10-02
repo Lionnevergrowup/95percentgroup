@@ -34,8 +34,8 @@ def app_version(html):
         changed = bool(git('status', '--porcelain', '--untracked-files=no').strip()) or bool(git('ls-files', '--others', '--exclude-standard').strip())
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
         return n, date   # no git: leave it as it is
-    if changed and n <= base:
-        return base + 1, datetime.date.today().isoformat()
+    if changed:   # this update: the next number (kept if already set), dated today
+        return max(n, base + 1), datetime.date.today().isoformat()
     return n, date
 
 

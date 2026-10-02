@@ -256,6 +256,20 @@ button{font-family:inherit;color:inherit}
 .word .lt.gap{color:transparent;border:4px dashed #bdb3ea;border-radius:14px;min-width:.62em;text-align:center;margin:0 .06em}
 .word .lt.found{color:var(--green-d);animation:pop-in .25s}
 .tile.vowel{background:var(--pink);box-shadow:0 7px 0 var(--pink-d)}
+/* sound sorting */
+.sort-bins{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:clamp(8px,2vw,16px);width:min(100%,820px)}
+.sort-bin{border:0;border-radius:20px;background:#5ab8f5;box-shadow:0 6px 0 #2f8fd1;min-height:clamp(130px,26vh,210px);padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font:inherit;color:var(--ink);transition:transform .12s}
+.sort-bin.over{transform:scale(1.05);box-shadow:0 0 0 5px #fff,0 6px 0 #2f8fd1}
+.sort-bin .lab{background:#d6efff;border:3px solid var(--ink);border-radius:12px;padding:0 .6em;font-family:var(--font-read);font-weight:700;font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.2}
+.sort-bin .kw{font-size:.9rem;font-weight:700;background:rgba(255,255,255,.75);border-radius:999px;padding:0 .5em}
+.sort-bin .got{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;font-size:clamp(1.7rem,5.5vw,2.8rem);line-height:1.2}
+.sort-bin .chip{animation:pop-in .25s}
+.sort-tray{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;min-height:80px;max-width:820px}
+.sort-card{position:relative;border:0;border-radius:18px;background:#fff;box-shadow:0 5px 0 var(--line);padding:6px 14px;font-size:clamp(2.2rem,8vw,3rem);line-height:1.2;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .2s;display:flex;flex-direction:column;align-items:center}
+.sort-card .word{font-size:clamp(1.4rem,5vw,2rem)}
+.sort-card .p{font-size:clamp(1.6rem,6vw,2.2rem)}
+.sort-card.dragging{transition:none;z-index:60;box-shadow:0 12px 24px rgba(0,0,0,.25);cursor:grabbing}
+.sort-card.picked{outline:5px solid var(--purple);outline-offset:2px}
 
 /* tracing */
 .trace-top{display:flex;align-items:center;gap:12px;font-family:var(--font-read);font-weight:700;font-size:clamp(1.3rem,4vw,1.8rem)}
@@ -458,8 +472,8 @@ table.prog td.l small{color:var(--ink-soft)}
 <script>
 // Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
 // older clip list). tools/stamp.py writes both.
-var APP_VERSION = {n:24, date:'2026-10-01'};
-var AUDIO_VERSION = {manifest:'c8954db9a8', music:'7264c3b77d'};
+var APP_VERSION = {n:25, date:'2026-10-02'};
+var AUDIO_VERSION = {manifest:'5f1d0492e8', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
 <script>
@@ -588,6 +602,7 @@ const T = {
   beginQ:'What sound does it start with?', whichSound:'Which sound do you hear?',
   pictureWord:'Which word matches the picture?', missingLetter:'Which letter is missing?',
   popAll:'Pop every bubble that says:', missingWord:'Read the sentence. Which word is missing?',
+  sort:'Put each picture in the box for its first sound!', sortVowels:'Put each word in the box for its vowel sound!',
 };
 // What the bubble shows for a question (Leo says the matching line in T)
 const SHOW = {
@@ -595,6 +610,7 @@ const SHOW = {
   begin:'What sound does it start with? 🤔', whichSound:'Listen. Which sound do you hear? 👂', findLittle:'Find the little letter! 🔍',
   pictureWord:'Which word matches the picture? 🖼️', missingLetter:'Which letter is missing? 🧩',
   popAll:'Pop every bubble with the word! 🔵', missingWord:'Read the sentence. Which word is missing? 🤔',
+  sort:'Put each picture in the box for its first sound! 🧺', sortVowels:'Put each word in the box for its vowel sound! 🧺',
 };
 const article = w => /^(a|e|i|o|u(?!ni))/i.test(w) ? 'an' : 'a';   // an owl, a unicorn
 const P = {
@@ -673,9 +689,9 @@ const BEGIN_PICS = {
   e:[['egg','🥚'],['elephant','🐘']], f:[['fish','🐟'],['fox','🦊'],['frog','🐸']], g:[['goat','🐐'],['girl','👧'],['guitar','🎸']],
   h:[['horse','🐴'],['hat','🎩'],['house','🏠']], i:[['inchworm','🐛']], j:[['juice','🧃'],['jet','✈️']],
   k:[['key','🔑'],['kite','🪁'],['kangaroo','🦘']], l:[['lion','🦁'],['leaf','🍃'],['lemon','🍋']],
-  m:[['monkey','🐵'],['moon','🌙'],['mouse','🐭']], n:[['nose','👃'],['nine','9️⃣']], o:[['octopus','🐙'],['otter','🦦'],['ox','🐂']],
-  p:[['pig','🐷'],['pizza','🍕'],['panda','🐼'],['pan','🍳']], q:[['queen','👸']], r:[['rabbit','🐰'],['rocket','🚀'],['robot','🤖']],
-  s:[['sun','☀️'],['snake','🐍'],['sock','🧦'],['star','⭐']], t:[['tiger','🐯'],['turtle','🐢'],['tooth','🦷'],['tomato','🍅']],
+  m:[['monkey','🐵'],['moon','🌙'],['mouse','🐭']], n:[['nose','👃'],['nine','9️⃣'],['newspaper','📰']], o:[['octopus','🐙'],['otter','🦦'],['ox','🐂']],
+  p:[['pig','🐷'],['pizza','🍕'],['panda','🐼'],['pencil','✏️'],['popcorn','🍿'],['penguin','🐧']], q:[['queen','👸']], r:[['rabbit','🐰'],['rocket','🚀'],['robot','🤖']],
+  s:[['sun','☀️'],['snake','🐍'],['sock','🧦'],['star','⭐']], t:[['tiger','🐯'],['turtle','🐢'],['tooth','🦷'],['tomato','🍅'],['taco','🌮']],
   u:[['umbrella','☂️'],['up','⬆️']], v:[['violin','🎻'],['van','🚐'],['volcano','🌋']], w:[['watermelon','🍉'],['worm','🪱'],['web','🕸️']],
   y:[['yo-yo','🪀'],['yarn','🧶']], z:[['zebra','🦓'],['zipper','🤐']],
 };
@@ -1443,7 +1459,7 @@ function showParents(){
       h('h2', {}, 'Quick Parent Guide'),
       h('p', {}, 'Practice 10–15 minutes at a time. Have the child say each sound, blend sounds into words, and then write the word. For silent-e lessons, compare the short-vowel word with the long-vowel word.'),
       h('ul', {},
-        h('li', {}, '🔤 Sounds: “Say the sounds.” Tap the letter cards, then pop the balloon with the sound Leo says.'),
+        h('li', {}, '🔤 Sounds: “Say the sounds.” Tap the letter cards, then pop the balloon with the sound Leo says. Last, sort the pictures into the boxes for their first sound (drag them, or tap a picture and then a box; tapping a picture says its name).'),
         h('li', {}, '✏️ Trace: write each letter stroke by stroke, in the right order: start at the green dot (it shows the stroke’s number) and follow the arrows. “👀 Show me” shows how the letter is written.'),
         h('li', {}, '📖 Read Words / ✨ Magic e: “Read the words.” Sound out each word; in silent-e lessons compare cap → cape.'),
         h('li', {}, '👀 Sight Words: the high-frequency words for the lesson.'),
@@ -1529,11 +1545,37 @@ function confirmReset(){
 // 1 · Sounds: tap the cards, then pop the balloon. Question types take turns:
 // hear (Leo says the letter), begin (a picture: what sound does it start with?), case (big T: find little t),
 // and in silent-e lessons vowel (Leo says cap or cape: a or a_e?).
+// Sound sorting (the last game in Sounds): the boxes and the cards to sort into them.
+// Letter lessons sort pictures by their first sound (up to 4 boxes; never both c and k, which sound the same).
+// Silent-e lessons sort words by their vowel: short (cap) or long (cape); the final review sorts long words by vowel.
+function sortSet(l){
+  const per = isShort() ? 1 : 2;
+  const magic = l.sounds.filter(isMagicSound);
+  const longOf = w => w[firstVowel(w)].toLowerCase() + '_e';
+  if (magic.length === 1){
+    const s = magic[0], cards = shuffle(l.pairs).slice(0, isShort() ? 2 : 3).flatMap(([a, b]) => [{w:a, bin:s[0]}, {w:b, bin:s}]);
+    return {kind:'vowel', bins:[s[0], s], cards:shuffle(cards)};
+  }
+  if (magic.length > 1){
+    const pool = uniq(LESSONS.filter(x => x.pairs && x.n <= l.n).flatMap(x => x.pairs.map(p => p[1])));
+    const cards = magic.flatMap(s => shuffle(pool.filter(w => longOf(w) === s)).slice(0, per).map(w => ({w, bin:s})));
+    return {kind:'vowel', bins:magic, cards:shuffle(cards)};
+  }
+  let use = shuffle(l.sounds.filter(x => BEGIN_PICS[x]));
+  if (use.includes('c') && use.includes('k')) use = use.filter(x => x !== 'k');
+  use = use.slice(0, 4);
+  if (use.length < 2) return null;
+  const bins = l.sounds.filter(x => use.includes(x));   // in the lesson's order
+  const cards = bins.flatMap(b => shuffle(BEGIN_PICS[b]).slice(0, per).map(([w, pic]) => ({w, pic, bin:b})));
+  return {kind:'begin', bins, cards:shuffle(cards)};
+}
+
 function actSounds(ctx){
   const l = ctx.lesson, targets = l.sounds, magic = targets.some(isMagicSound);
   const order = isShort() ? roundList(targets, 3, 3) : roundList(targets, targets.length === 1 ? 4 : 6, 6);
   const plan = typePlan(order.length, magic ? ['hear', 'vowel'] : ['hear', 'begin', 'case']);
-  const total = order.length + 1;
+  const sorting = sortSet(l);
+  const total = order.length + 1 + (sorting ? 1 : 0);
   const seen = new Set();
   const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🎈 Play ➜');
   const cards = targets.map(s => {
@@ -1552,7 +1594,7 @@ function actSounds(ctx){
   ctx.replay = intro; intro();
 
   function round(r){
-    if (r >= order.length){ ctx.progress(1); later(ctx.done, 300); return; }
+    if (r >= order.length){ if (sorting) sortGame(); else { ctx.progress(1); later(ctx.done, 300); } return; }
     ctx.progress((r + 1) / total);
     const target = order[r];
     let type = plan[r];
@@ -1611,6 +1653,87 @@ function actSounds(ctx){
       return b;
     });
     ctx.stage.replaceChildren(h('div', {class:'row'}, listenBtn(prompt), top), h('div', {class:'balloons'}, balloons));
+    ctx.replay = prompt; prompt();
+  }
+
+  // Drag each card into its box, or tap a card and then a box. Tapping a card says its name.
+  function sortGame(){
+    const {kind, bins, cards} = sorting;
+    let left = cards.length, picked = null, misses = new Map(), placed = 0;
+    const said = c => Speech.speak(c.w);
+    const boxes = bins.map(b => {
+      const got = h('div', {class:'got'});
+      const box = h('button', {class:'sort-bin', 'data-sound':b, 'aria-label':'Box ' + soundName(b), onclick:e => {
+        if (!tapOK(e)) return;
+        if (picked) drop(picked, box); else { Sfx.tap(); say(soundGlyph(b), soundName(b)); }
+      }}, h('span', {class:'lab'}, b), kind === 'vowel' ? h('span', {class:'kw'}, SOUND[b][1] + ' ' + SOUND[b][0]) : null, got);
+      box._got = got; box._sound = b;
+      return box;
+    });
+    const tray = h('div', {class:'sort-tray'});
+    const cardEls = cards.map(c => {
+      const el = h('button', {class:'sort-card', 'data-word':c.w, 'aria-label':c.w, onclick:e => { if (e.detail === 0) choose(el); }},   // keyboard; touch and mouse below
+        kind === 'begin' ? c.pic : [PIC[c.w] ? h('span', {class:'p'}, PIC[c.w]) : null, wordEl(c.w, false)]);
+      el._card = c;
+      let start = null, moved = false, at = null;
+      onStrokes(el, {
+        down: p => { start = p; moved = false; },
+        move: p => {
+          if (!start) return;
+          at = p;
+          const dx = p.x - start.x, dy = p.y - start.y;
+          if (!moved && Math.hypot(dx, dy) < 10) return;
+          if (!moved){ moved = true; el.classList.add('dragging'); unpick(); said(c); }
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+          boxes.forEach(b => b.classList.toggle('over', hit(b, p)));
+        },
+        up: () => {
+          if (!start) return;
+          const p = at; start = null;
+          boxes.forEach(b => b.classList.remove('over'));
+          if (!moved){ choose(el); return; }
+          el.classList.remove('dragging');
+          const box = boxes.find(b => hit(b, p));
+          if (box) drop(el, box); else snapBack(el);
+        },
+      }, {getBoundingClientRect: () => ({left:0, top:0})});
+      return el;
+    });
+    const hit = (b, p) => { const r = b.getBoundingClientRect(); return p.x >= r.left && p.x <= r.right && p.y >= r.top && p.y <= r.bottom; };
+    function unpick(){ if (picked){ picked.classList.remove('picked'); picked = null; } }
+    function choose(el){
+      if (!el.isConnected) return;
+      const again = picked === el;
+      unpick();
+      if (again) return;
+      picked = el; el.classList.add('picked'); Sfx.tap(); said(el._card);
+    }
+    function snapBack(el){ el.style.transform = ''; }
+    function drop(el, box){
+      const c = el._card;
+      unpick();
+      if (c.bin === box._sound){
+        Sfx.good(); burst(box);
+        el.remove(); left--; placed++;
+        box._got.append(h('span', {class:'chip'}, kind === 'begin' ? c.pic : (PIC[c.w] || c.w)));
+        box.classList.remove('hint');
+        ctx.progress((order.length + 1 + placed / cards.length) / total);
+        if (!left){
+          const pr = pick(PRAISE);
+          afterSay(say(pr, [pr, kind === 'begin' ? P.startsWith(c.w) : c.w]), 1200, () => { ctx.progress(1); later(ctx.done, 300); });
+        } else say(kind === 'begin' ? P.startsWith(c.w) : c.w + ' ✓', kind === 'begin' ? P.startsWith(c.w) : [c.w, P.thatIs(c.bin)]);
+      } else {
+        Sfx.bad(); snapBack(el); wiggle(el);
+        const n = (misses.get(c.w) || 0) + 1; misses.set(c.w, n);
+        say(pick(TRY), kind === 'begin' ? [c.w, T.beginQ] : [c.w, T.whichSound]);
+        if (n >= 2) boxes.find(b => b._sound === c.bin).classList.add('hint');
+      }
+    }
+    ctx.progress((order.length + 1) / total);
+    ctx.stage.replaceChildren(h('div', {class:'sort-bins', style:{'--n':bins.length}}, boxes), tray);
+    tray.append(...cardEls);
+    quizHook('sort', Object.fromEntries(cards.map(c => [c.w, c.bin])));
+    const prompt = () => say(kind === 'begin' ? SHOW.sort : SHOW.sortVowels, kind === 'begin' ? T.sort : T.sortVowels);
     ctx.replay = prompt; prompt();
   }
 }
