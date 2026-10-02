@@ -264,6 +264,8 @@ button{font-family:inherit;color:inherit}
 .sort-bin .kw{font-size:.9rem;font-weight:700;background:rgba(255,255,255,.75);border-radius:999px;padding:0 .5em}
 .sort-bin .got{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;font-size:clamp(1.7rem,5.5vw,2.8rem);line-height:1.2}
 .sort-bin .chip{animation:pop-in .25s}
+.drawn{display:inline-block;width:1.15em;height:1.05em;vertical-align:-.15em}
+.drawn svg{width:100%;height:100%;display:block}
 .sort-tray{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;min-height:80px;max-width:820px}
 .sort-card{position:relative;border:0;border-radius:18px;background:#fff;box-shadow:0 5px 0 var(--line);padding:6px 14px;font-size:clamp(2.2rem,8vw,3rem);line-height:1.2;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .2s;display:flex;flex-direction:column;align-items:center}
 .sort-card .word{font-size:clamp(1.4rem,5vw,2rem)}
@@ -472,8 +474,8 @@ table.prog td.l small{color:var(--ink-soft)}
 <script>
 // Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
 // older clip list). tools/stamp.py writes both.
-var APP_VERSION = {n:26, date:'2026-10-02'};
-var AUDIO_VERSION = {manifest:'5f1d0492e8', music:'7264c3b77d'};
+var APP_VERSION = {n:27, date:'2026-10-02'};
+var AUDIO_VERSION = {manifest:'9c00b75d57', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
 <script>
@@ -683,14 +685,24 @@ const LOOKALIKE = {b:'dpqh', d:'bqp', p:'qbd', q:'pgd', m:'nw', n:'mhu', u:'nv',
 // Letters that make the same sound, so they are never the wrong answer for each other.
 const SAME_SOUND = {c:'kq', k:'cq', q:'ck'};
 // Pictures for "What sound does it start with?" (each word starts with the lesson's sound; x has none)
+// Pictures for words that have no emoji: small drawings, shown at the size of an emoji
+const DRAWN = {
+  igloo:'<svg viewBox="0 0 64 58" aria-hidden="true"><path d="M2 54h60" stroke="#bfe0f5" stroke-width="4" stroke-linecap="round"/>'
+    + '<path d="M4 52A28 30 0 0 1 60 52z" fill="#dff1ff" stroke="#3f82bf" stroke-width="3" stroke-linejoin="round"/>'
+    + '<path d="M9 50A23 26 0 0 1 22 28" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".8"/>'
+    + '<path d="M6 44h52M9 36h46M16 28h32M15 52v-8M27 52v-8M21 44v-8M33 44v-8M45 44v-8M27 36v-8M39 36v-8" fill="none" stroke="#7fb3dc" stroke-width="2.2"/>'
+    + '<path d="M34 52v-8a6 6 0 0 1 12 0v8z" fill="#2f5f8a"/></svg>',
+};
+// a picture as a page element (emoji text, or one of the drawings)
+const picEl = pic => { if (!String(pic).startsWith('<svg')) return pic; const el = h('span', {class:'drawn'}); el.innerHTML = pic; return el; };
 const BEGIN_PICS = {
   a:[['apple','🍎'],['ant','🐜'],['alligator','🐊']], b:[['bear','🐻'],['banana','🍌'],['bus','🚌']],
   c:[['cat','🐱'],['car','🚗'],['cow','🐮'],['cake','🎂']], d:[['dog','🐶'],['duck','🦆'],['drum','🥁']],
   e:[['egg','🥚'],['elephant','🐘']], f:[['fish','🐟'],['fox','🦊'],['frog','🐸']], g:[['goat','🐐'],['girl','👧'],['guitar','🎸']],
-  h:[['horse','🐴'],['hat','🎩'],['house','🏠']], i:[['inchworm','🐛']], j:[['juice','🧃'],['jet','✈️']],
+  h:[['horse','🐴'],['hat','🎩'],['house','🏠']], i:[['inchworm','🐛'],['igloo',DRAWN.igloo]], j:[['juice','🧃'],['jet','✈️']],
   k:[['key','🔑'],['kite','🪁'],['kangaroo','🦘']], l:[['lion','🦁'],['leaf','🍃'],['lemon','🍋']],
   m:[['monkey','🐵'],['moon','🌙'],['mouse','🐭']], n:[['nose','👃'],['nine','9️⃣'],['newspaper','📰']], o:[['octopus','🐙'],['otter','🦦'],['ox','🐂']],
-  p:[['pig','🐷'],['pizza','🍕'],['panda','🐼'],['pencil','✏️'],['popcorn','🍿'],['penguin','🐧']], q:[['queen','👸']], r:[['rabbit','🐰'],['rocket','🚀'],['robot','🤖']],
+  p:[['pig','🐷'],['pizza','🍕'],['panda','🐼'],['pencil','✏️'],['popcorn','🍿'],['penguin','🐧']], q:[['queen','👸'],['question','❓']], r:[['rabbit','🐰'],['rocket','🚀'],['robot','🤖']],
   s:[['sun','☀️'],['snake','🐍'],['sock','🧦'],['star','⭐']], t:[['tiger','🐯'],['turtle','🐢'],['tooth','🦷'],['tomato','🍅'],['taco','🌮']],
   u:[['umbrella','☂️'],['up','⬆️']], v:[['violin','🎻'],['van','🚐'],['volcano','🌋']], w:[['watermelon','🍉'],['worm','🪱'],['web','🕸️']],
   y:[['yo-yo','🪀'],['yarn','🧶']], z:[['zebra','🦓'],['zipper','🤐']],
@@ -1614,7 +1626,7 @@ function actSounds(ctx){
     } else if (type === 'begin'){
       const [word, pic] = pick(BEGIN_PICS[target]);
       opts = letterChoices(target, l, r);
-      top = h('div', {class:'quiz-pic show', 'aria-label':word}, pic);
+      top = h('div', {class:'quiz-pic show', 'aria-label':word}, picEl(pic));
       prompt = () => say(SHOW.begin, [word, T.beginQ]);
       right = pr => [pr, P.startsWith(word)];
       wrong = s => [P.thatIs(s), word, T.beginQ];
@@ -1673,7 +1685,7 @@ function actSounds(ctx){
     const tray = h('div', {class:'sort-tray'});
     const cardEls = cards.map(c => {
       const el = h('button', {class:'sort-card', 'data-word':c.w, 'aria-label':c.w, onclick:e => { if (e.detail === 0) choose(el); }},   // keyboard; touch and mouse below
-        kind === 'begin' ? c.pic : [PIC[c.w] ? h('span', {class:'p'}, PIC[c.w]) : null, wordEl(c.w, false)]);
+        kind === 'begin' ? picEl(c.pic) : [PIC[c.w] ? h('span', {class:'p'}, PIC[c.w]) : null, wordEl(c.w, false)]);
       el._card = c;
       let start = null, moved = false, at = null;
       onStrokes(el, {
@@ -1715,7 +1727,7 @@ function actSounds(ctx){
       if (c.bin === box._sound){
         Sfx.good(); burst(box);
         el.remove(); left--; placed++;
-        box._got.append(h('span', {class:'chip'}, kind === 'begin' ? c.pic : (PIC[c.w] || c.w)));
+        box._got.append(h('span', {class:'chip'}, kind === 'begin' ? picEl(c.pic) : (PIC[c.w] || c.w)));
         box.classList.remove('hint');
         ctx.progress((order.length + 1 + placed / cards.length) / total);
         if (!left){
