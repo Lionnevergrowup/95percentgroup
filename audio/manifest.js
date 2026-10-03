@@ -51,6 +51,7 @@ window.PHONICS_CLIPS = {
 "Which letter is missing?": "6f517439b69b.mp3",
 "Pop every bubble that says:": "d207b7641f3b.mp3",
 "Read the sentence. Which word is missing?": "03c185031c16.mp3",
+"Welcome back! Let's keep going.": "34dbe1d2f9e3.mp3",
 "Put each picture in the box for its first sound!": "ca32028fe1ce.mp3",
 "Put each word in the box for its vowel sound!": "873de8cedc61.mp3",
 "Awesome!": "f71cde25621d.mp3",

@@ -474,8 +474,8 @@ table.prog td.l small{color:var(--ink-soft)}
 <script>
 // Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
 // older clip list). tools/stamp.py writes both.
-var APP_VERSION = {n:27, date:'2026-10-02'};
-var AUDIO_VERSION = {manifest:'9c00b75d57', music:'7264c3b77d'};
+var APP_VERSION = {n:28, date:'2026-10-03'};
+var AUDIO_VERSION = {manifest:'80e33f16e1', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
 <script>
@@ -603,7 +603,7 @@ const T = {
   yourPicture:'Your picture is:', greatDrawing:'Great drawing!',
   beginQ:'What sound does it start with?', whichSound:'Which sound do you hear?',
   pictureWord:'Which word matches the picture?', missingLetter:'Which letter is missing?',
-  popAll:'Pop every bubble that says:', missingWord:'Read the sentence. Which word is missing?',
+  popAll:'Pop every bubble that says:', missingWord:'Read the sentence. Which word is missing?', welcomeBack:"Welcome back! Let's keep going.",
   sort:'Put each picture in the box for its first sound!', sortVowels:'Put each word in the box for its vowel sound!',
 };
 // What the bubble shows for a question (Leo says the matching line in T)
@@ -611,7 +611,7 @@ const SHOW = {
   startDot:'Start at the green dot! 🟢', followArrow:'Follow the arrow! ➡️', toTheEnd:'Keep going to the end of the arrow! ✏️',
   begin:'What sound does it start with? 🤔', whichSound:'Listen. Which sound do you hear? 👂', findLittle:'Find the little letter! 🔍',
   pictureWord:'Which word matches the picture? 🖼️', missingLetter:'Which letter is missing? 🧩',
-  popAll:'Pop every bubble with the word! 🔵', missingWord:'Read the sentence. Which word is missing? 🤔',
+  popAll:'Pop every bubble with the word! 🔵', missingWord:'Read the sentence. Which word is missing? 🤔', welcomeBack:'Welcome back! 👋',
   sort:'Put each picture in the box for its first sound! 🧺', sortVowels:'Put each word in the box for its vowel sound! 🧺',
 };
 const article = w => /^(a|e|i|o|u(?!ni))/i.test(w) ? 'an' : 'a';   // an owl, a unicorn
@@ -773,17 +773,106 @@ function roundList(items, min, max){
 }
 
 /* ---------- saved progress (this device only) ---------- */
-const STORE_KEY = 'phonics-fun-v1';
-const state = (() => {
-  let s = null;
-  try { s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
+// Progress is kept in three places, so it survives a browser (or an in-app browser such as WeChat) clearing one:
+// localStorage (everything), IndexedDB (everything) and a small cookie (finished games, hand ticks, settings).
+// When the game opens they are merged: a game finished in any of them counts. "Reset progress" starts a new
+// generation (gen), and copies from an older generation are ignored, so a reset never comes back.
+const STORE_KEY = 'phonics-fun-v1', COOKIE = 'phonicsfun', RESUME_V = 1;
+const ACT_KEYS = ['sounds', 'trace', 'read', 'sight', 'spell', 'sentence', 'draw'], CHECK_KEYS = ['Sounds', 'Words', 'Writing', 'Sentence'];
+function cleanState(s){
   if (!s || typeof s !== 'object') s = {};
-  if (!s.done || typeof s.done !== 'object') s.done = {};
-  if (!s.check || typeof s.check !== 'object') s.check = {};   // ticks a parent set by hand: {lesson: {Sounds: true, ...}}
+  for (const k of ['done', 'check', 'resume']) if (!s[k] || typeof s[k] !== 'object') s[k] = {};   // resume: where each unfinished game was left
+  s.gen = +s.gen || 0;
   s.settings = Object.assign({rate:0.85, sfx:true, music:true, leo:null, captions:false, short:false}, s.settings || {});
   return s;
+}
+// add another copy into s; true if anything was added
+function mergeState(s, o){
+  if (!o || typeof o !== 'object' || (+o.gen || 0) < s.gen) return false;
+  let added = false;
+  if ((+o.gen || 0) > s.gen){ s.gen = +o.gen; s.done = {}; s.check = {}; s.resume = {}; added = true; }   // that copy was reset later
+  for (const [n, acts] of Object.entries(o.done || {})) for (const [k, v] of Object.entries(acts || {}))
+    if (v && !(s.done[n] && s.done[n][k])){ (s.done[n] = s.done[n] || {})[k] = true; added = true; }
+  for (const [n, marks] of Object.entries(o.check || {})) for (const [k, v] of Object.entries(marks || {}))
+    if (!(s.check[n] && k in s.check[n])){ (s.check[n] = s.check[n] || {})[k] = !!v; added = true; }
+  for (const [k, r] of Object.entries(o.resume || {}))
+    if (r && (!s.resume[k] || (r.at || 0) > (s.resume[k].at || 0))){ s.resume[k] = r; added = true; }
+  return added;
+}
+// the cookie: "1.<generation>.<finished games: 2 characters per lesson>.<hand ticks: 2 per lesson>.<settings>"
+function toCookie(s){
+  const d = LESSONS.map(l => ACT_KEYS.reduce((t, k, i) => t + (s.done[l.n] && s.done[l.n][k] ? 1 << i : 0), 0).toString(36).padStart(2, '0')).join('');
+  const c = LESSONS.map(l => { const m = s.check[l.n] || {}; return CHECK_KEYS.reduce((t, k, i) => t + (k in m ? (m[k] ? 1 : 2) << (i * 2) : 0), 0).toString(16).padStart(2, '0'); }).join('');
+  const st = s.settings, g = [Math.max(0, [0.7, 0.85, 1].indexOf(st.rate)), +!!st.sfx, +!!st.music, +!!st.captions, +!!st.short].join('');
+  return `1.${s.gen.toString(36)}.${d}.${c}.${g}`;
+}
+function fromCookie(code){
+  const n = LESSONS.length * 2, m = new RegExp(`^1\\.([0-9a-z]+)\\.([0-9a-z]{${n}})\\.([0-9a-f]{${n}})\\.([0-2][01]{4})$`).exec(code || '');
+  if (!m) return null;
+  const o = {gen:parseInt(m[1], 36) || 0, done:{}, check:{}, resume:{}};
+  LESSONS.forEach((l, i) => {
+    const d = parseInt(m[2].substr(i * 2, 2), 36), c = parseInt(m[3].substr(i * 2, 2), 16);
+    ACT_KEYS.forEach((k, j) => { if (d & (1 << j)) (o.done[l.n] = o.done[l.n] || {})[k] = true; });
+    CHECK_KEYS.forEach((k, j) => { const v = (c >> (j * 2)) & 3; if (v) (o.check[l.n] = o.check[l.n] || {})[k] = v === 1; });
+  });
+  const g = m[4];
+  o.settings = {rate:[0.7, 0.85, 1][+g[0]], sfx:g[1] === '1', music:g[2] === '1', captions:g[3] === '1', short:g[4] === '1'};
+  return o;
+}
+function readCookie(){
+  try { const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=([^;]*)')); return m ? fromCookie(decodeURIComponent(m[1])) : null; } catch (e) { return null; }
+}
+function writeCookie(s){ try { document.cookie = `${COOKIE}=${encodeURIComponent(toCookie(s))}; max-age=34560000; path=/; SameSite=Lax`; } catch (e) {} }
+const IDB = {
+  db: null,
+  open(){
+    if (this.db) return this.db;
+    return (this.db = new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('no IndexedDB'));
+      const r = indexedDB.open('phonics-fun', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    })).catch(e => { this.db = null; throw e; });
+  },
+  get(){ return this.open().then(db => new Promise(res => { const q = db.transaction('kv').objectStore('kv').get('state'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); })).catch(() => null); },
+  put(json){ return this.open().then(db => new Promise(res => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(json, 'state'); tx.oncomplete = tx.onerror = tx.onabort = () => res(); })).catch(() => {}); },
+};
+let hadLocal = false;
+const state = (() => {
+  let local = null;
+  try { local = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) {}
+  hadLocal = !!(local && typeof local === 'object');
+  const s = cleanState(local);
+  const ck = readCookie();
+  if (ck && mergeState(s, ck) && !hadLocal) Object.assign(s.settings, ck.settings);   // localStorage was lost: the cookie's settings
+  return s;
 })();
-function saveState(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+let persistAsked = false;
+function saveState(){
+  let json = JSON.stringify(state);
+  try { localStorage.setItem(STORE_KEY, json); }
+  catch (e) {   // full: the biggest things kept are drawings to carry on, so drop those and try again
+    for (const k of Object.keys(state.resume)) if (state.resume[k] && state.resume[k].img) delete state.resume[k];
+    json = JSON.stringify(state);
+    try { localStorage.setItem(STORE_KEY, json); } catch (e2) {}
+  }
+  writeCookie(state);
+  IDB.put(json);
+  // ask the browser not to clear this site's storage when space runs low (Chrome and Safari decide by themselves;
+  // Firefox would show a question, so it is not asked there)
+  if (!persistAsked){ persistAsked = true; try { if (navigator.storage && navigator.storage.persist && !/Firefox\//.test(navigator.userAgent)) navigator.storage.persist().catch(() => {}); } catch (e) {} }
+}
+// IndexedDB answers a moment after the start: anything there that the other two lost is added back
+function restoreSaved(then){
+  IDB.get().then(json => {
+    let o = null;
+    try { o = typeof json === 'string' ? JSON.parse(json) : null; } catch (e) {}
+    const settings = o && o.settings, added = !!o && mergeState(state, o);
+    if (added && !hadLocal && settings) Object.assign(state.settings, settings);
+    if (added || JSON.stringify(state) !== json) saveState();   // all three copies the same again
+    if (added) then();
+  });
+}
 
 /* ---------- speech (Web Speech API) ---------- */
 let audioUnlocked = false;
@@ -1163,7 +1252,14 @@ function putLeoBack(){
 // text = what the bubble shows, speech = what Leo says (so answers are never shown as text)
 // With "Show what Leo says" on, the bubble shows exactly what Leo says, so the game can be played with the sound off.
 const caption = speech => (Array.isArray(speech) ? speech : [speech]).map(norm).filter(Boolean).join(' ');
+let welcomeAt = -1;   // the screen (navId) of a game that carries on from where it was left
 function say(text, speech){
+  if (welcomeAt === navId){
+    welcomeAt = -1;
+    const sp = speech == null ? text : speech;
+    speech = [T.welcomeBack, ...(Array.isArray(sp) ? sp : [sp])];
+    text = SHOW.welcomeBack + ' ' + text;
+  }
   lastSay = {text, speech};
   const my = ++sayCount;
   bubbleEl.textContent = state.settings.captions && speech != null ? caption(speech) : text;
@@ -1348,25 +1444,42 @@ function showLesson(l){
   else say(`You finished lesson ${l.n}! 🎉 Play again?`, [P.finished(l.n), T.playAgain]);
 }
 
+// Every game remembers where it was after each question (ctx.save), so leaving it or reloading the page
+// carries on from there (ctx.saved). Finishing the game forgets it; "↺" starts the game again.
 function showActivity(l, a){
   const bar = h('i');
   const stage = h('div', {class:'stage'});
-  const id = navId;
+  const id = navId, key = l.n + '/' + a.key;
+  const kept = state.resume[key];
+  let over = false;
   const ctx = {
     lesson:l, stage, replay:null,
+    saved: kept && kept.v === RESUME_V ? kept : null,
     alive: () => id === navId,
     progress: f => { bar.style.width = Math.round(Math.max(0, Math.min(1, f)) * 100) + '%'; },
-    done: () => { if (id === navId) finishActivity(l, a); },
+    // where the game is, so a reload carries on from there (each game calls it once something is done)
+    save: data => { if (id !== navId || over) return; state.resume[key] = Object.assign({v:RESUME_V, at:Date.now()}, data); saveState(); },
+    forget: () => { if (id !== navId || over || !state.resume[key]) return; delete state.resume[key]; saveState(); },
+    done: () => { if (id !== navId || over) return; over = true; delete state.resume[key]; finishActivity(l, a); },
   };
   Speech.preload(lessonPhrases(l), true);
+  const again = ctx.saved ? h('button', {class:'icon-btn', 'aria-label':'Start this game again', title:'Start again', onclick:() => {
+    Sfx.tap(); delete state.resume[key]; saveState(); route();
+  }}, '↺') : null;
   mount(
     h('header', {class:'topbar act-head'},
       backBtn('#/lesson/' + l.n),
       h('h1', {class:'act-title', 'aria-label':`Lesson ${l.n}: ${actName(l, a)}`}, actIcon(l, a), ' ', h('span', {class:'nm'}, actName(l, a))),
       h('div', {class:'progress', role:'progressbar', 'aria-label':'Progress'}, bar),
+      again,
       h('button', {class:'icon-btn', 'aria-label':'Hear again', onclick:() => { Sfx.tap(); if (ctx.replay) ctx.replay(); }}, '🔊')),
     stage);
-  a.run(ctx);
+  if (!ctx.saved){ a.run(ctx); return; }
+  welcomeAt = navId;   // Leo's next line starts with "Welcome back!"
+  try { a.run(ctx); }
+  catch (e){   // a place saved by an older version that no longer fits: start the game fresh
+    welcomeAt = -1; delete state.resume[key]; saveState(); ctx.saved = null; stage.replaceChildren(); a.run(ctx);
+  }
 }
 
 function finishActivity(l, a){
@@ -1478,7 +1591,7 @@ function showParents(){
         h('li', {}, '🧩 Spell It: “Write the words” and “Dictation.” Hear a word and tap its letters in order.'),
         h('li', {}, '💬 Sentence: “Read a sentence.” Read along, then put the words in order.'),
         h('li', {}, '🎨 Draw: “Draw and label.” Draw a picture, pick a word for it, and save it if you like.')),
-      h('p', {class:'note'}, 'Tips: turn the sound on; a tablet works best. Progress is saved in this browser on this device only. Tap Leo (bottom left) to hear an instruction again.')),
+      h('p', {class:'note'}, 'Tips: turn the sound on; a tablet works best. Progress is saved in this browser on this device only, after every question, so a refresh carries on where the child stopped. Tap Leo (bottom left) to hear an instruction again.')),
     h('section', {class:'panel-card'},
       h('h2', {}, 'Settings'),
       h('div', {class:'setting'}, h('label', {}, 'Voice speed'),
@@ -1492,7 +1605,7 @@ function showParents(){
       h('p', {class:'note'}, 'For playing with the sound off: Leo’s speech bubble shows everything he says, including the letter or word to find.'),
       h('div', {class:'setting'}, h('label', {}, 'Game length'),
         seg('Game length', [['🐣 Short', true], ['🦁 Normal', false]], !!state.settings.short, v => { state.settings.short = v; saveState(); Sfx.tap(); })),
-      h('p', {class:'note'}, 'Short: about 3 questions in each game, for younger children. Stars are saved after every game, so a lesson can be spread over several days.'),
+      h('p', {class:'note'}, 'Short: about 3 questions in each game, for younger children. Progress is saved after every question, so a lesson can be spread over several days.'),
       h('div', {class:'setting'}, h('label', {}, 'Leo the lion'),
         h('button', {class:'btn white', onclick:() => { Sfx.tap(); putLeoBack(); }}, '🦁 Put Leo back in the corner')),
       h('div', {class:'setting'}, h('label', {}, 'Sound test'),
@@ -1528,7 +1641,7 @@ function confirmReset(){
       Sfx.bad(); err.textContent = input.value.trim() ? 'Not quite. Try again.' : 'Type the answer first.';
       wiggle(input); input.select(); return;
     }
-    state.done = {}; state.check = {}; saveState();
+    state.done = {}; state.check = {}; state.resume = {}; state.gen = Date.now(); saveState();   // a new generation: older copies are ignored
     route();   // redraw the parents page with everything cleared
     overlay([
       h('div', {class:'big-star'}, '🧹'),
@@ -1583,11 +1696,12 @@ function sortSet(l){
 }
 
 function actSounds(ctx){
-  const l = ctx.lesson, targets = l.sounds, magic = targets.some(isMagicSound);
-  const order = isShort() ? roundList(targets, 3, 3) : roundList(targets, targets.length === 1 ? 4 : 6, 6);
-  const plan = typePlan(order.length, magic ? ['hear', 'vowel'] : ['hear', 'begin', 'case']);
-  const sorting = sortSet(l);
+  const l = ctx.lesson, targets = l.sounds, magic = targets.some(isMagicSound), S = ctx.saved;
+  const order = S ? S.order : isShort() ? roundList(targets, 3, 3) : roundList(targets, targets.length === 1 ? 4 : 6, 6);
+  const plan = S ? S.plan : typePlan(order.length, magic ? ['hear', 'vowel'] : ['hear', 'begin', 'case']);
+  const sorting = S ? S.sorting : sortSet(l);
   const total = order.length + 1 + (sorting ? 1 : 0);
+  const keep = (stage, more) => ctx.save(Object.assign({order, plan, sorting, stage}, more));
   const seen = new Set();
   const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🎈 Play ➜');
   const cards = targets.map(s => {
@@ -1600,13 +1714,17 @@ function actSounds(ctx){
       h('span', {class:'glyph'}, soundGlyph(s)), h('span', {class:'pic'}, pic), h('span', {class:'kw'}, kw));
     return card;
   });
-  ctx.stage.replaceChildren(h('div', {class:'cards' + (targets.length > 4 ? ' many' : '')}, cards), playBtn);
-  ctx.progress(0);
-  const intro = () => say(targets.length > 1 ? T.tapEachCard : T.tapTheCard);
-  ctx.replay = intro; intro();
+  if (S){ if (S.stage === 'sort' && sorting) sortGame(S.placed || []); else round(Math.min(S.r || 0, order.length)); }   // carry on
+  else {
+    ctx.stage.replaceChildren(h('div', {class:'cards' + (targets.length > 4 ? ' many' : '')}, cards), playBtn);
+    ctx.progress(0);
+    const intro = () => say(targets.length > 1 ? T.tapEachCard : T.tapTheCard);
+    ctx.replay = intro; intro();
+  }
 
   function round(r){
-    if (r >= order.length){ if (sorting) sortGame(); else { ctx.progress(1); later(ctx.done, 300); } return; }
+    if (r >= order.length){ if (sorting) sortGame([]); else { ctx.progress(1); later(ctx.done, 300); } return; }
+    if (r > 0) keep('round', {r});   // kept once something is done
     ctx.progress((r + 1) / total);
     const target = order[r];
     let type = plan[r];
@@ -1669,9 +1787,13 @@ function actSounds(ctx){
   }
 
   // Drag each card into its box, or tap a card and then a box. Tapping a card says its name.
-  function sortGame(){
+  function sortGame(already){
     const {kind, bins, cards} = sorting;
-    let left = cards.length, picked = null, misses = new Map(), placed = 0;
+    const done = cards.filter(c => already.includes(c.w)), todo = cards.filter(c => !already.includes(c.w));
+    let left = todo.length, picked = null, misses = new Map();
+    const placed = done.map(c => c.w);
+    if (!todo.length){ ctx.progress(1); later(ctx.done, 300); return; }   // all sorted just before the page was left
+    keep('sort', {placed});
     const said = c => Speech.speak(c.w);
     const boxes = bins.map(b => {
       const got = h('div', {class:'got'});
@@ -1683,7 +1805,9 @@ function actSounds(ctx){
       return box;
     });
     const tray = h('div', {class:'sort-tray'});
-    const cardEls = cards.map(c => {
+    const chipOf = c => h('span', {class:'chip'}, kind === 'begin' ? picEl(c.pic) : (PIC[c.w] || c.w));
+    for (const c of done) boxes.find(b => b._sound === c.bin)._got.append(chipOf(c));   // sorted before the page was left
+    const cardEls = todo.map(c => {
       const el = h('button', {class:'sort-card', 'data-word':c.w, 'aria-label':c.w, onclick:e => { if (e.detail === 0) choose(el); }},   // keyboard; touch and mouse below
         kind === 'begin' ? picEl(c.pic) : [PIC[c.w] ? h('span', {class:'p'}, PIC[c.w]) : null, wordEl(c.w, false)]);
       el._card = c;
@@ -1726,10 +1850,11 @@ function actSounds(ctx){
       unpick();
       if (c.bin === box._sound){
         Sfx.good(); burst(box);
-        el.remove(); left--; placed++;
-        box._got.append(h('span', {class:'chip'}, kind === 'begin' ? picEl(c.pic) : (PIC[c.w] || c.w)));
+        el.remove(); left--; placed.push(c.w);
+        box._got.append(chipOf(c));
+        keep('sort', {placed});
         box.classList.remove('hint');
-        ctx.progress((order.length + 1 + placed / cards.length) / total);
+        ctx.progress((order.length + 1 + placed.length / cards.length) / total);
         if (!left){
           const pr = pick(PRAISE);
           afterSay(say(pr, [pr, kind === 'begin' ? P.startsWith(c.w) : c.w]), 1200, () => { ctx.progress(1); later(ctx.done, 300); });
@@ -1741,10 +1866,10 @@ function actSounds(ctx){
         if (n >= 2) boxes.find(b => b._sound === c.bin).classList.add('hint');
       }
     }
-    ctx.progress((order.length + 1) / total);
+    ctx.progress((order.length + 1 + placed.length / cards.length) / total);
     ctx.stage.replaceChildren(h('div', {class:'sort-bins', style:{'--n':bins.length}}, boxes), tray);
     tray.append(...cardEls);
-    quizHook('sort', Object.fromEntries(cards.map(c => [c.w, c.bin])));
+    quizHook('sort', Object.fromEntries(todo.map(c => [c.w, c.bin])));
     const prompt = () => say(kind === 'begin' ? SHOW.sort : SHOW.sortVowels, kind === 'begin' ? T.sort : T.sortVowels);
     ctx.replay = prompt; prompt();
   }
@@ -1831,9 +1956,9 @@ if (window.__quiz) window.__writeOut = writeOut;   // test hook
 
 // 2 · Trace: follow each stroke from its green dot along the arrows, in order (letters, or silent-e words)
 function actTrace(ctx){
-  const l = ctx.lesson, items = traceItems(l).slice(0, isShort() ? 3 : 6);
+  const l = ctx.lesson, S = ctx.saved, items = S ? S.items : traceItems(l).slice(0, isShort() ? 3 : 6);
   const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let i = 0, fails = 0, won = false, hue = 260;
+  let i = S ? Math.min(S.i || 0, items.length) : 0, fails = 0, won = false, hue = 260;
   const wrap = h('div', {class:'trace-wrap'});
   // three layers: the letter (bottom), the child's ink, and the dots, numbers and arrows on top (taps go through them)
   const guide = h('canvas', {'aria-hidden':'true'}), ink = h('canvas', {'aria-label':'Tracing area'}), marks = h('canvas', {'aria-hidden':'true', class:'marks'});
@@ -2009,6 +2134,8 @@ function actTrace(ctx){
     afterSay(say(pr, [pr, text.length === 1 ? soundName(text.toLowerCase()) : text]), 1300, () => { i++; if (i >= items.length) ctx.done(); else startItem(); });
   }
   function startItem(){
+    if (i >= items.length){ ctx.progress(1); later(ctx.done, 300); return; }   // finished just before the page was left
+    if (i > 0) ctx.save({items, i});
     won = false; fails = 0; cur.k = 0; cur.prog = 0; mode = null; wrap.classList.remove('win');
     const text = items[i];
     shape = writeOut(text);
@@ -2142,11 +2269,13 @@ const isCVC = w => /^[b-df-hj-np-tv-z][aeiou][b-df-hj-np-tv-z]$/.test(w);
 const taughtVowels = l => uniq(LESSONS.filter(x => x.n <= l.n).flatMap(x => x.sounds).filter(s => 'aeiou'.includes(s)));
 // Word questions take turns: hear (tap the word Leo says), picture (read the words, tap the one that matches the picture),
 // missing (c_t: tap the missing vowel; short-vowel words only).
-function wordQuiz(ctx, targets, doneSteps, total, onDone){
+// opt: {start, plan} to carry on; keep(r, plan) is called as each question starts, so its place can be saved
+function wordQuiz(ctx, targets, doneSteps, total, onDone, opt = {}){
   const l = ctx.lesson;
-  const plan = typePlan(targets.length, l.pairs ? ['hear', 'picture'] : ['hear', 'picture', 'missing']);
+  const plan = opt.plan || typePlan(targets.length, l.pairs ? ['hear', 'picture'] : ['hear', 'picture', 'missing']);
   const round = r => {
     if (r >= targets.length){ onDone(); return; }
+    if (opt.keep) opt.keep(r, plan);
     ctx.progress((doneSteps + r) / total);
     const target = targets[r], k = hard(r) ? 3 : 2;
     let type = plan[r];
@@ -2206,16 +2335,19 @@ function wordQuiz(ctx, targets, doneSteps, total, onDone){
     ctx.stage.replaceChildren(listenBtn(prompt), pic, ...body);
     ctx.replay = prompt; prompt();
   };
-  round(0);
+  round(opt.start || 0);
 }
 function actRead(ctx){
   const l = ctx.lesson;
   if (l.pairs) return actMagic(ctx);
-  const words = l.words;
-  const quiz = isShort() ? roundList(words, 3, 3) : roundList(words, 4, 6);
+  const words = l.words, S = ctx.saved;
+  const quiz = S ? S.quiz : isShort() ? roundList(words, 3, 3) : roundList(words, 4, 6);
   const total = quiz.length + 1;
   const seen = new Set();
-  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); wordQuiz(ctx, quiz, 1, total, () => { ctx.progress(1); later(ctx.done, 300); }); }}, '🎮 Play ➜');
+  const play = (start, plan) => wordQuiz(ctx, quiz, 1, total, () => { ctx.progress(1); later(ctx.done, 300); },
+    {start, plan, keep:(r, p) => { if (r > 0) ctx.save({quiz, r, plan:p}); }});
+  if (S) return play(S.r || 0, S.plan);   // carry on with the questions
+  const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); play(0); }}, '🎮 Play ➜');
   const cards = words.map(w => {
     const we = wordEl(w, false);
     let busy = false;
@@ -2239,12 +2371,18 @@ function actRead(ctx){
 // 3b · Magic e (silent-e lessons): add the e and hear the vowel change
 function actMagic(ctx){
   const l = ctx.lesson, pairs = l.pairs, singles = l.words || [];
-  const steps = pairs.length + singles.length;
-  const quiz = shuffle(allWords(l)).slice(0, isShort() ? 3 : 8);
+  const steps = pairs.length + singles.length, S = ctx.saved;
+  const quiz = S ? S.quiz : shuffle(allWords(l)).slice(0, isShort() ? 3 : 8);
   const total = steps + quiz.length;
-  let i = 0;
+  let i = S ? (S.stage === 'quiz' ? steps : Math.min(S.i || 0, steps)) : 0;
   const learn = () => {
-    if (i >= steps){ wordQuiz(ctx, quiz, steps, total, () => { ctx.progress(1); later(ctx.done, 300); }); return; }
+    if (i >= steps){
+      const again = S && S.stage === 'quiz';
+      wordQuiz(ctx, quiz, steps, total, () => { ctx.progress(1); later(ctx.done, 300); },
+        {start: again ? S.r || 0 : 0, plan: again ? S.plan : null, keep:(r, p) => ctx.save({stage:'quiz', quiz, r, plan:p})});
+      return;
+    }
+    if (i > 0) ctx.save({stage:'learn', quiz, i});
     ctx.progress(i / total);
     const nextBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); i++; learn(); }}, 'Next ➜');
     if (i < pairs.length){
@@ -2282,10 +2420,13 @@ function actMagic(ctx){
 
 // 4 · Sight words: tap the cards, then pop the bubble with the word you hear
 function actSight(ctx){
-  const l = ctx.lesson, words = hfWords(l);
+  const l = ctx.lesson, words = hfWords(l), S = ctx.saved;
   const pool = uniq(LESSONS.filter(x => x.n <= l.n).flatMap(hfWords));
-  const order = isShort() ? roundList(words, 3, 3) : roundList(words, 5, 8);
+  const order = S ? S.order : isShort() ? roundList(words, 3, 3) : roundList(words, 5, 8);
   const total = order.length + 1;
+  // hear: pop the word Leo says; all: pop every bubble with that word (2 or 3 of them). Later rounds use look-alike words.
+  const plan = S ? S.plan : typePlan(order.length, ['hear', 'all']);
+  if (S) return round(Math.min(S.r || 0, order.length));   // carry on with the bubbles
   const seen = new Set();
   const playBtn = h('button', {class:'btn green big', hidden:true, onclick:() => { Sfx.tap(); round(0); }}, '🔵 Play ➜');
   const cards = words.map(w => {
@@ -2301,10 +2442,9 @@ function actSight(ctx){
   const intro = () => say(T.sightIntro);
   ctx.replay = intro; intro();
 
-  // hear: pop the word Leo says; all: pop every bubble with that word (2 or 3 of them). Later rounds use look-alike words.
-  const plan = typePlan(order.length, ['hear', 'all']);
   function round(r){
     if (r >= order.length){ ctx.progress(1); later(ctx.done, 300); return; }
+    if (r > 0) ctx.save({order, plan, r});
     ctx.progress((r + 1) / total);
     const target = order[r], type = plan[r];
     const pool2 = uniq([...words, ...pool]).filter(w => w !== target);
@@ -2358,9 +2498,10 @@ function spellExtras(l, word, k, hardRound){
   return uniq([...look, ...shuffle(l.sounds.filter(s => s.length === 1)), ...shuffle(ALPHA)]).filter(ok).slice(0, k);
 }
 function actSpell(ctx){
-  const l = ctx.lesson, list = spellWords(l);
+  const l = ctx.lesson, S = ctx.saved, list = S ? S.list : spellWords(l);
   const round = r => {
     if (r >= list.length){ ctx.progress(1); later(ctx.done, 300); return; }
+    if (r > 0) ctx.save({list, r});
     ctx.progress(r / list.length);
     const word = list[r], chars = [...word];
     let pos = 0, misses = 0, solved = false;
@@ -2397,14 +2538,16 @@ function actSpell(ctx){
     ctx.stage.replaceChildren(h('div', {class:'row'}, listenBtn(prompt), pic), slotRow, h('div', {class:'tiles'}, tiles));
     ctx.replay = prompt; prompt();
   };
-  round(0);
+  round(S ? Math.min(S.r || 0, list.length) : 0);
 }
 
 // 6 · Sentence: read along, put the words in order, then find the missing word
 function actSentence(ctx){
-  const l = ctx.lesson, sents = l.sentences.slice(0, isShort() ? 1 : 2), total = sents.length * 3;
+  const l = ctx.lesson, S = ctx.saved, sents = l.sentences.slice(0, S ? S.n : isShort() ? 1 : 2), total = sents.length * 3;
   let readTok = 0;
+  const keep = (k, phase) => { if (k > 0 || phase !== 'read') ctx.save({n:sents.length, k, phase}); };
   const readPhase = k => {
+    keep(k, 'read');
     ctx.progress((k * 3) / total);
     const [text, picture] = sents[k];
     const tokens = text.split(' ');
@@ -2436,6 +2579,7 @@ function actSentence(ctx){
     say(T.readSentenceShow, T.readSentence).then(() => { if (ctx.alive() && readTok === tok0) readAlong(); });
   };
   const buildPhase = k => {
+    keep(k, 'build');
     ctx.progress((k * 3 + 1) / total);
     const [text, picture] = sents[k];
     const tokens = text.split(' ');
@@ -2471,6 +2615,7 @@ function actSentence(ctx){
   };
   // one word is missing; the child reads the sentence and picks it from look-alike words
   const missPhase = k => {
+    keep(k, 'miss');
     ctx.progress((k * 3 + 2) / total);
     const [text, picture] = sents[k];
     const tokens = text.split(' '), words = tokens.map(cleanWord);
@@ -2510,7 +2655,8 @@ function actSentence(ctx){
       h('div', {class:'sentence'}, shown), h('div', {class:'sentence'}, chips));
     ctx.replay = prompt; prompt();
   };
-  readPhase(0);
+  if (S && S.k < sents.length) ({read:readPhase, build:buildPhase, miss:missPhase}[S.phase] || readPhase)(S.k);
+  else readPhase(0);
 }
 
 // The word to leave out: a lesson word if there is one, else a sight word, else the longest word (not the first word if possible)
@@ -2522,7 +2668,7 @@ function missingIndex(l, words){
 
 // 7 · Draw and label
 function actDraw(ctx){
-  const l = ctx.lesson, words = allWords(l);
+  const l = ctx.lesson, words = allWords(l), S = ctx.saved;
   const colors = DRAW_COLORS.map(c => c[1]);
   let color = colors[1], size = 12, erasing = false, label = '', hasInk = false, drawing = false, last = null;
   const history = [];
@@ -2550,11 +2696,11 @@ function actDraw(ctx){
   // undo brings back the picture, whether it had ink, and its word
   const undoBtn = h('button', {class:'tool', 'aria-label':'undo', title:'undo', onclick:() => {
     Sfx.tap(); const snap = history.pop();
-    if (snap){ c2d.putImageData(snap.img, 0, 0); hasInk = snap.ink; setLabel(snap.label, snap.lpos); }
+    if (snap){ c2d.putImageData(snap.img, 0, 0); hasInk = snap.ink; setLabel(snap.label, snap.lpos); keepSoon(); }
   }}, '↩️');
   // clear removes the drawing and its word
   const clearBtn = h('button', {class:'tool', 'aria-label':'clear picture', title:'clear picture', onclick:() => {
-    Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; setLabel('', null);
+    Sfx.tap(); pushHistory(); paintWhite(); hasInk = false; setLabel('', null); keepSoon();
   }}, '🗑️');
   // tap a word to label the picture; tap it again to take the label off
   const bank = h('div', {class:'word-bank', role:'group', 'aria-label':'Pick a word for your picture'}, words.map(w => h('button', {class:'wchip', 'aria-pressed':'false', onclick:() => {
@@ -2569,7 +2715,7 @@ function actDraw(ctx){
     labelEl.hidden = !label;
     labelEl.setAttribute('aria-label', label ? `Label: ${label}. Tap to take it off.` : 'Label');
     [...bank.children].forEach(c => { const on = c.textContent === label; c.classList.toggle('on', on); c.setAttribute('aria-pressed', String(on)); });
-    placeLabel();
+    placeLabel(); keepSoon();
   }
   // keep the whole label inside the picture
   function placeLabel(){
@@ -2600,7 +2746,7 @@ function actDraw(ctx){
       if (!drag) return;
       const moved = drag.moved; drag = null; labelEl.classList.remove('dragging');
       Sfx.tap();
-      if (!moved) setLabel('');
+      if (!moved) setLabel(''); else keepSoon();
     },
   }, wrap);
   const saveBtn = h('button', {class:'tool', 'aria-label':'save picture', title:'save picture', onclick:() => { Sfx.tap(); savePicture(); }}, '💾');
@@ -2643,8 +2789,22 @@ function actDraw(ctx){
   onStrokes(cv, {
     down: p => { if (!c2d) return false; pushHistory(); drawing = true; last = p; seg(p, {x:p.x + 0.1, y:p.y}); if (!erasing) hasInk = true; },
     move: p => { if (!drawing) return; seg(last, p); last = p; },
-    up: () => { drawing = false; },
+    up: () => { drawing = false; keepSoon(); },
   });
+  // the picture is kept (small, as a JPEG) a moment after each change, so a reload brings it back
+  let keepTimer = 0, restoring = !!(S && S.img);
+  function keepSoon(){
+    if (restoring || !c2d) return;
+    clearTimeout(keepTimer);
+    keepTimer = later(() => {
+      if (drawing) return keepSoon();
+      const k = Math.min(1, 900 / Math.max(W, H)), t = document.createElement('canvas');
+      t.width = Math.max(1, Math.round(W * k)); t.height = Math.max(1, Math.round(H * k));
+      const o = t.getContext('2d'); o.fillStyle = '#fff'; o.fillRect(0, 0, t.width, t.height); o.drawImage(cv, 0, 0, t.width, t.height);
+      let img = null; try { img = hasInk ? t.toDataURL('image/jpeg', 0.8) : null; } catch (e) {}
+      if (img || label) ctx.save({img, ink:!!img, label, lpos}); else ctx.forget();
+    }, 400);
+  }
   function roundRect(o, x, y, w, ht, r){
     o.beginPath(); o.moveTo(x + r, y);
     o.arcTo(x + w, y, x + w, y + ht, r); o.arcTo(x + w, y + ht, x, y + ht, r);
@@ -2676,6 +2836,18 @@ function actDraw(ctx){
   }
   watchSize(wrap, () => { const r = wrap.getBoundingClientRect(); if (Math.round(r.width) !== W || Math.round(r.height) !== H) layout(); });
   layout();
+  if (S){   // carry on with the picture from before the reload
+    if (S.label && words.includes(S.label)) setLabel(S.label, S.lpos || null);
+    if (!S.img){ restoring = false; return; }
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      restoring = false;
+      if (!ctx.alive() || !img.naturalWidth || !c2d) return;
+      c2d.save(); c2d.setTransform(1, 0, 0, 1, 0, 0); c2d.drawImage(img, 0, 0, cv.width, cv.height); c2d.restore();
+      hasInk = !!S.ink;
+    };
+    img.src = S.img;
+  }
 }
 
 /* ---------- version ---------- */
@@ -2757,6 +2929,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden){ Spee
 route();
 if (!/^#\/(parents|start)/.test(location.hash)) showStart();   // #/start shows it via route()
 checkUpdate();
+// IndexedDB brought back something the other two lost: redraw the screen (under the start screen, Play redraws it)
+if (window.__quiz) window.__app = {state, saveState, IDB, totalStars, RESUME_V};   // test hook
+restoreSaved(() => { if (!(overlayEl && overlayEl.classList.contains('splash')) && !/^#\/lesson\/\d+\/\w/.test(location.hash)) route(); });
 })();
 </script>
 </body>

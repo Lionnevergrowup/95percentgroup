@@ -28,7 +28,9 @@ Each lesson has 7 short activities that follow the workbook page:
 - A tap only counts on the current question: for a moment after a new question appears, and for a press that started on the previous question's button, taps are ignored, so a quick child is never marked wrong for the last question.
 - Children earn a ⭐ for each activity and an animal sticker 🏆 for each finished lesson.
 - **Parents page (👪)**: the Quick Parent Guide, voice speed, sound effects on/off, "Show what Leo says" (his speech bubble shows everything he says, so the game can be played with the sound off), "Game length: Short" (about 3 questions per game, for younger children), a sound test with tips if nothing plays, a "Refresh to latest version" button, a "Parent/teacher check" table (sounds, words, writing, sentence) for all 25 lessons that ticks itself as the child plays and can be ticked by hand, and a "Reset progress" button (with a grown-up check).
-- Progress is saved in this browser on this device (localStorage). Nothing is sent anywhere.
+- Progress is saved in this browser on this device. Nothing is sent anywhere.
+  - Every finished game and hand tick is kept in three places (localStorage, IndexedDB and a small cookie), so it survives a refresh, closing the browser, and a browser (or an in-app browser such as WeChat) clearing one of them. When the game opens, the copies are joined: a game finished in any of them counts. "Reset progress" starts a new generation, so older copies never bring cleared progress back.
+  - A game left half-way carries on from the same question after a refresh or after going back (Leo says "Welcome back!"). A half-drawn picture comes back too. The ↺ button at the top starts that game again from the beginning.
 
 ## Tips
 
