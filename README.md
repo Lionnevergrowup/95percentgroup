@@ -73,7 +73,7 @@ The letters to trace are drawn from stroke data (`STROKES` in `index.html`), in 
 
 ## Site icon
 
-The icon (Leo the lion) is drawn in `icons/icon.svg` and used for the browser tab. `NODE_PATH=$(npm root -g) node tools/make_icons.js` draws the other sizes from it: `favicon.ico` (16, 32, 48 px; the 16 px one has bigger eyes and fewer details so it still reads), the iPhone home-screen icon and the Android icons. After changing the icon, raise the `?v=` number on the icon links in `index.html` and `manifest.webmanifest`, so browsers fetch the new one.
+The icon is "ABC" in the game's colours with Leo the lion peeking up from below, so it reads as English for young children. `python3 tools/make_icon_svg.py` (needs `pip install fonttools brotli`) draws it from the game's title font (`fonts/fredoka-latin.woff2`) and Leo's face (`icons/leo.svg`) into `icons/icon.svg`, `icons/icon-small.svg` (just "ABC", bigger: the browser tab, where Leo would be a blur), `icons/icon-full.svg` (edge to edge, for phones) and `icons/icon-maskable.svg` (Android round icons). Then `NODE_PATH=$(npm root -g) node tools/make_icons.js` draws the other sizes from them: `favicon.ico` (16, 32, 48 px), the iPhone home-screen icon and the Android icons. After changing the icon, raise the `?v=` number on the icon links in `index.html` and `manifest.webmanifest`, so browsers fetch the new one.
 
 ## Background music
 

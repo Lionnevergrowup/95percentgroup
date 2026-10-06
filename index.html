@@ -8,17 +8,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>Phonics Fun</title>
 <meta name="description" content="Kindergarten phonics practice game: 25 lessons of letter sounds, tracing, word reading, sight words, spelling, sentences and drawing.">
-<!-- site icon: Leo the lion (icons/icon.svg; tools/make_icons.js draws the other sizes) -->
-<link rel="icon" href="favicon.ico?v=2" sizes="32x32">
-<link rel="icon" href="icons/icon.svg?v=2" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
-<link rel="manifest" href="manifest.webmanifest?v=2">
+<!-- site icon: "ABC" with Leo the lion (tools/make_icon_svg.py draws icons/*.svg; tools/make_icons.js the other sizes); the tab shows just "ABC" -->
+<link rel="icon" href="favicon.ico?v=3" sizes="32x32">
+<link rel="icon" href="icons/icon-small.svg?v=3" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
+<link rel="manifest" href="manifest.webmanifest?v=3">
 <!-- link previews (when the address is shared in a chat app) -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Phonics Fun">
 <meta property="og:description" content="Kindergarten phonics practice game: 25 lessons with Leo the lion.">
 <meta property="og:url" content="https://lionnevergrowup.github.io/95percentgroup/">
-<meta property="og:image" content="https://lionnevergrowup.github.io/95percentgroup/icons/icon-512.png?v=2">
+<meta property="og:image" content="https://lionnevergrowup.github.io/95percentgroup/icons/icon-512.png?v=3">
 <meta name="twitter:card" content="summary">
 <meta name="apple-mobile-web-app-title" content="Phonics Fun">
 <link rel="preload" href="fonts/andika-700-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -474,7 +474,7 @@ table.prog td.l small{color:var(--ink-soft)}
 <script>
 // Version of this page (the number goes up with every update) and of the audio files (so a page never uses an
 // older clip list). tools/stamp.py writes both.
-var APP_VERSION = {n:28, date:'2026-10-03'};
+var APP_VERSION = {n:29, date:'2026-10-06'};
 var AUDIO_VERSION = {manifest:'80e33f16e1', music:'7264c3b77d'};
 document.write('<script src="audio/manifest.js?v=' + AUDIO_VERSION.manifest + '"><\/script>');
 </script>
